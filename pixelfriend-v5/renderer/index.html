@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PixelFriend</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#171717; --surface-2:#18191D; --surface-3:#2A2A2A;
+  --ink:#E5E5E5; --ink-muted:#A3A3A3; --line-15:rgba(229,229,229,.15);
+  --blue-300:#8AB4F8; --blue-500:#4285F4; --ease:cubic-bezier(.22,1,.36,1);
+  --size:220px; --accent:#FFD54A;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;
+  font-family:"DM Sans",system-ui,-apple-system,sans-serif;color:var(--ink);user-select:none}
+body.web{background:linear-gradient(180deg,#6b7fa0,#2c3646)}
+body.web::after{content:"";position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:520px;height:14px;border-radius:14px 14px 0 0;
+  background:rgba(255,255,255,.22);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+
+/* ---------- actor ---------- */
+#actor{position:absolute;left:0;bottom:0;will-change:transform;z-index:2}
+#actor.hidden{visibility:hidden}
+#charWrap{position:relative;height:var(--size);display:flex;align-items:flex-end;justify-content:center;cursor:grab}
+#actor.drag #charWrap{cursor:grabbing}
+#flip{height:100%;display:flex;align-items:flex-end;justify-content:center;transition:transform .25s var(--ease)}
+#char{height:100%;width:auto;max-width:420px;object-fit:contain;display:block;pointer-events:none;transform-origin:50% 100%;
+  filter:drop-shadow(0 10px 8px rgba(0,0,0,.35))}
+#vcan{height:100%;width:auto;display:none;pointer-events:none;transform-origin:50% 100%;filter:drop-shadow(0 10px 8px rgba(0,0,0,.35))}
+.m-sleep #vcan{filter:drop-shadow(0 10px 8px rgba(0,0,0,.35)) brightness(.85)}
+#drip{image-rendering:pixelated;display:none;transform-origin:50% 100%;pointer-events:none}
+#shadow{position:absolute;bottom:-5px;left:50%;width:60%;height:12px;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(rgba(0,0,0,.35),transparent 70%);pointer-events:none;transition:opacity .2s}
+#actor.air #shadow{opacity:.15}
+
+/* mood + motion animations (on the image, so flipping stays separate) */
+.m-idle  .body{animation:breathe 3.4s ease-in-out infinite}
+.m-walk  .body{animation:walk .5s ease-in-out infinite}
+.m-run   .body{animation:run .28s ease-in-out infinite}
+.m-ask   .body{animation:ask 1.6s ease-in-out infinite}
+.m-happy .body{animation:jump .55s var(--ease) 2}
+.m-sleep .body{animation:breathe 5s ease-in-out infinite;filter:drop-shadow(0 10px 8px rgba(0,0,0,.35)) brightness(.8)}
+.m-held  .body{animation:dangle 1s ease-in-out infinite;transform-origin:50% 0}
+.m-stretch .body{animation:stretch 1.2s ease-in-out infinite}
+.m-giggle .body{animation:giggle .18s linear 6}
+.m-dizzy .body{animation:dizzy .6s ease-in-out 3}
+#actor.real .body{animation:none}
+@keyframes breathe{0%,100%{transform:scale(1,1) rotate(0)}30%{transform:scale(1.008,1.018) rotate(.6deg)}70%{transform:scale(.996,1.006) rotate(-.6deg)}}
+@keyframes walk{0%,100%{transform:translateY(0) rotate(-2.5deg)}25%{transform:translateY(-7px) rotate(0)}50%{transform:translateY(0) rotate(2.5deg)}75%{transform:translateY(-7px) rotate(0)}}
+@keyframes run{0%,100%{transform:translateY(0) rotate(6deg) scale(1.02,.97)}50%{transform:translateY(-14px) rotate(9deg) scale(.98,1.03)}}
+@keyframes ask{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-2deg)}50%{transform:translateY(0)}75%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes jump{0%,100%{transform:translateY(0) scale(1,1)}20%{transform:scale(1.05,.93)}50%{transform:translateY(-30px) scale(.97,1.04)}80%{transform:scale(1.03,.97)}}
+@keyframes dangle{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes stretch{0%,100%{transform:scale(1,1)}50%{transform:scale(.96,1.07)}}
+@keyframes giggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg) translateX(-2px)}75%{transform:rotate(4deg) translateX(2px)}}
+@keyframes dizzy{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+
+.fx{position:absolute;pointer-events:none;font-weight:800;font-size:22px;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.5);animation:rise 1.4s var(--ease) forwards;z-index:3}
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.8)}20%{opacity:1}to{opacity:0;transform:translateY(-70px) scale(1.15)}}
+.confetti{position:fixed;top:-20px;font-size:22px;pointer-events:none;z-index:4;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+#zzz{position:absolute;right:10%;top:4%;font-weight:800;color:#fff;opacity:0;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.m-sleep #zzz{animation:zz 2.4s ease-in-out infinite}
+@keyframes zz{0%{opacity:0;transform:translate(0,10px)}40%{opacity:1}100%{opacity:0;transform:translate(14px,-24px)}}
+
+/* ---------- bubble + meter (above head, kept on screen) ---------- */
+#over{position:absolute;left:50%;bottom:calc(100% + 6px);display:flex;flex-direction:column;align-items:center;transform:translateX(-50%);width:max-content}
+#bubble{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:360px;margin-bottom:6px;
+  opacity:0;transform:translateY(10px) scale(.94);pointer-events:none;transition:opacity .38s var(--ease),transform .38s var(--ease)}
+#bubble.show{opacity:1;transform:none;pointer-events:auto}
+#msg{white-space:pre-line}
+#bubble .row{display:flex;gap:8px;margin-top:8px;justify-content:center}
+.btn{border:1px solid transparent;border-radius:9999px;padding:6px 14px;font:700 12px/16px "DM Sans",system-ui,sans-serif;cursor:pointer;
+  transition:transform .15s cubic-bezier(.4,0,.2,1)}
+.btn:hover{transform:scale(1.05)}
+.btn.p{background:#fff;color:#171717}
+.btn.g{background:rgba(255,255,255,.85);color:#171717}
+#bubble.float #msg{font-size:18px;line-height:23px;font-weight:800;color:var(--accent);letter-spacing:-.01em;
+  text-shadow:0 2px 0 rgba(0,0,0,.35),0 0 12px rgba(0,0,0,.5),0 0 2px #000}
+#bubble.float .btn{box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#bubble.card{padding:12px 14px;background:var(--surface-2);border-radius:14px;box-shadow:0 0 0 1px rgba(255,255,255,.10),0 22px 48px -12px rgba(0,0,0,.55)}
+#bubble.card #msg{font-size:14px;line-height:20px;font-weight:600}
+#bubble.card .btn.g{background:transparent;color:var(--ink);border-color:var(--line-15)}
+#bubble.comic{padding:12px 16px;background:#fff;color:#171717;border-radius:20px;border:2px solid #171717;box-shadow:4px 4px 0 #171717}
+#bubble.comic #msg{font-size:15px;line-height:20px;font-weight:700}
+#bubble.comic .btn.p{background:#171717;color:#fff}
+#bubble.comic .btn.g{background:#fff;border-color:#171717}
+#meter{display:flex;align-items:center;gap:6px;padding:3px 9px;border-radius:9999px;background:rgba(24,25,29,.85);border:1px solid var(--line-15);
+  font-size:11px;line-height:15px;color:var(--ink-muted);opacity:0;transition:opacity .25s}
+#actor:hover #meter,#meter.on{opacity:1}
+#drops{display:flex;gap:2px}
+#drops i{width:5px;height:8px;border-radius:9999px;background:var(--surface-3)}
+#drops i.on{background:var(--blue-300)}
+#count b{color:var(--ink)}
+
+/* ---------- menus & panels ---------- */
+#menu{position:fixed;z-index:6;min-width:200px;padding:6px;border-radius:12px;background:var(--surface-2);display:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),0 22px 48px -12px rgba(0,0,0,.55);font-size:13px}
+#menu.show{display:block}
+#menu div{padding:7px 10px;border-radius:8px;cursor:pointer}
+#menu div:hover{background:var(--surface-3)}
+#menu hr{border:0;border-top:1px solid var(--line-15);margin:4px 0}
+.panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:440px;max-height:min(680px,92vh);overflow:auto;z-index:7;
+  padding:18px;border-radius:16px;background:var(--surface-2);display:none;font-size:13px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.10),0 22px 48px -12px rgba(0,0,0,.55),0 6px 18px -4px rgba(0,0,0,.35)}
+.panel.show{display:block}
+.panel h3{margin:0 0 2px;font-size:20px;line-height:26px;font-weight:700;letter-spacing:-.02em}
+.panel h4{margin:18px 0 6px;font-size:11px;line-height:16px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em}
+.panel .sub{color:var(--ink-muted);font-size:12px;line-height:16px;margin:0 0 8px}
+.panel label.f{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0;color:var(--ink-muted)}
+.panel input[type=text],.panel input[type=number],.panel select,.panel textarea{background:var(--bg);color:var(--ink);
+  border:1px solid var(--line-15);border-radius:10px;padding:6px 10px;font:inherit;width:190px}
+.panel input.n{width:70px}
+.panel textarea{width:100%;height:58px;resize:vertical;margin-top:4px}
+.panel input[type=range]{width:190px;accent-color:var(--blue-500)}
+.rem{display:flex;align-items:center;gap:8px;margin:7px 0;color:var(--ink-muted)}
+.rem span{flex:1}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:12px;border:1px dashed var(--line-15);
+  cursor:pointer;font-size:11px;color:var(--ink-muted);text-align:center;position:relative}
+.slot:hover{border-color:rgba(229,229,229,.35)}
+.slot .th{width:56px;height:64px;border-radius:8px;background:#0f1012 center/contain no-repeat;overflow:hidden}
+.slot .th video{width:100%;height:100%;object-fit:contain}
+.slot .vb{position:absolute;top:4px;left:6px;font-size:10px}
+.slot .x{position:absolute;top:2px;right:6px;display:none}
+.slot.filled .x{display:block}
+.chk{display:flex;align-items:center;gap:8px;margin:8px 0;color:var(--ink-muted)}
+.foot{display:flex;gap:8px;margin-top:16px;position:sticky;bottom:-18px;background:var(--surface-2);padding:10px 0}
+.foot .btn.g,.panel .btn.g{background:transparent;color:var(--ink);border-color:var(--line-15)}
+.tip{padding:10px;border-radius:10px;background:rgba(66,133,244,.12);color:#cfe0ff;font-size:12px;line-height:17px;margin-top:6px}
+.tip code{font-family:ui-monospace,monospace;font-size:11px;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.kpi{padding:10px;border-radius:12px;background:var(--bg);border:1px solid var(--line-15)}
+.kpi b{display:block;font-size:22px;line-height:28px;color:var(--ink)}
+.kpi span{font-size:11px;color:var(--ink-muted)}
+.bars{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:8px;padding:0 4px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--ink-muted)}
+.bar i{width:100%;border-radius:6px 6px 2px 2px;background:var(--blue-500);min-height:2px}
+.bar i.met{background:var(--blue-300)}
+#webbar{display:none;position:absolute;top:14px;left:14px;right:14px;justify-content:space-between;align-items:center;font-size:12px;color:#e8eefc;z-index:3}
+body.web #webbar{display:flex}
+#webbar .btn{background:rgba(255,255,255,.18);color:#fff}
+</style>
+</head>
+<body>
+<div id="webbar"><span><b>PixelFriend</b> · browser preview — drag, throw, pet (wiggle the mouse over him), right-click him</span>
+  <span><button class="btn" id="wCustom">Customize</button> <button class="btn" id="wTest">Test reminder</button> <button class="btn" id="wStats">Stats</button></span></div>
+
+<div id="actor" class="m-idle">
+  <div id="over">
+    <div id="bubble" class="float"><div id="msg"></div><div class="row" id="actions"></div></div>
+    <div id="meter"><div id="drops"></div><span id="count"></span></div>
+  </div>
+  <div id="charWrap">
+    <div id="flip"><img id="char" class="body" alt=""><canvas id="vcan" class="body"></canvas><canvas id="drip" class="body" width="16" height="20"></canvas></div>
+    <video id="vid" muted loop playsinline style="display:none"></video>
+    <div id="zzz">z Z</div>
+    <div id="shadow"></div>
+  </div>
+</div>
+
+<div id="menu">
+  <div data-a="drink">💧 Thanni kudichitten</div>
+  <div data-a="stretch">🙆 Stretch pannitten</div>
+  <div data-a="run">🏃 Oru round odu</div>
+  <div data-a="come">👋 Inga vaa</div>
+  <div data-a="stats">📊 Stats</div>
+  <hr>
+  <div data-a="settings">⚙️ Customize</div>
+  <div data-a="hide">🙈 1 hour hide</div>
+</div>
+
+<!-- ============ STATS ============ -->
+<div class="panel" id="stats">
+  <h3>Unga stats 📊</h3>
+  <p class="sub" id="stSub"></p>
+  <div class="kpis">
+    <div class="kpi"><b id="kW">0</b><span>Inniku glass</span></div>
+    <div class="kpi"><b id="kSt">0</b><span>Streak (days)</span></div>
+    <div class="kpi"><b id="kS">0</b><span>Stretch</span></div>
+    <div class="kpi"><b id="kE">0</b><span>Eye breaks</span></div>
+  </div>
+  <h4>Last 7 days · water</h4>
+  <div class="bars" id="bars"></div>
+  <div class="foot"><button class="btn p" id="stClose">Close</button></div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="panel" id="settings">
+  <h3>Customize PixelFriend</h3>
+  <p class="sub">Unga avatar-a podunga — <b>MP4 video (best, 3D animated)</b>, illa PNG / GIF / WebP. Background-a app thaane remove pannum.</p>
+
+  <h4>Avatar images</h4>
+  <div class="slots" id="slots"></div>
+  <label class="chk"><input type="checkbox" id="sRemoveBg" checked> Upload pannumbodhu background-a auto remove pannu</label>
+  <div class="tip">ChatGPT / Gemini-la unga photo upload panni kelunga:<br>
+  <code>Make a 3D Pixar-style full-body cartoon of me, standing, holding a water bottle, friendly smile, plain white background, no shadow</code><br>
+  Apram "walking side view", "waving", "drinking water happily", "sleeping standing up", "arms up stretching" versions-um kelunga. Walking-ku GIF irundha innum real-a irukkum.</div>
+  <div class="tip"><b>Video quality venumna (best):</b> mela vandha image-a Google Veo / Kling / Hailuo / Runway maadhiri AI video tool-la podunga, idha kelunga:<br>
+  <code>Animate this character, full body, camera locked, solid bright green background, character stays in center, seamless loop, 5 seconds: [idle breathing and looking around / walking in place side view / waving and asking a question / drinking water happily / sleeping standing]</code><br>
+  MP4 download panni box-la podunga. Background-a app live-a remove pannum (green screen best, plain color-um ok).</div>
+  <label class="f">Video background remove strength <input type="range" id="sKeyTol" min="20" max="140" step="5"></label>
+
+  <h4>You</h4>
+  <label class="f">Unga peru <input type="text" id="sName" placeholder="Azarudeen"></label>
+  <label class="f">Avatar size <input type="range" id="sSize" min="100" max="420" step="10"></label>
+
+  <h4>Movement</h4>
+  <label class="chk"><input type="checkbox" id="sRoam"> Screen-la suthi nadakkattum</label>
+  <label class="chk"><input type="checkbox" id="sLap"> Kudichadhum oru round odattum 🏃</label>
+  <label class="chk"><input type="checkbox" id="sCome"> Reminder-appo unga mouse pakkam odi varattum</label>
+  <label class="f">Speed <input type="range" id="sSpeed" min="0.5" max="2" step="0.1"></label>
+
+  <h4>Water</h4>
+  <label class="f">Remind every (min) <input type="number" id="sInterval" min="1" max="240"></label>
+  <label class="f">Daily goal (glasses) <input type="number" id="sGoal" min="1" max="20"></label>
+  <label class="f">Quiet hours <span><input class="n" type="number" id="sQs" min="0" max="23"> to <input class="n" type="number" id="sQe" min="0" max="23"></span></label>
+
+  <h4>Health reminders</h4>
+  <div class="rem"><input type="checkbox" id="rEyes"><span>👀 Eye break 20-20-20, every</span><input class="n" type="number" id="mEyes" min="5" max="240"> min</div>
+  <div class="rem"><input type="checkbox" id="rStretch"><span>🙆 Stretch, every</span><input class="n" type="number" id="mStretch" min="10" max="240"> min</div>
+  <div class="rem"><input type="checkbox" id="rPosture"><span>🧍 Posture check, every</span><input class="n" type="number" id="mPosture" min="10" max="240"> min</div>
+  <div class="rem"><input type="checkbox" id="rCustom"><span>📝 My reminder, every</span><input class="n" type="number" id="mCustom" min="1" max="600"> min</div>
+  <label class="f">My reminder text <input type="text" id="sCustomText" placeholder="Mail check pannu 📬"></label>
+
+  <h4>Messages</h4>
+  <label class="f">Bubble style <select id="sStyle"><option value="float">Floating text (reel style)</option><option value="card">Dark card</option><option value="comic">Comic bubble</option></select></label>
+  <label class="f">Text color <input type="text" id="sAccent" placeholder="#FFD54A"></label>
+  <div style="color:var(--ink-muted);margin-top:8px">Water question (oru line-ku oru message; <b>{name}</b> = unga peru)</div>
+  <textarea id="sAsk"></textarea>
+  <div style="color:var(--ink-muted);margin-top:8px">YES apram sollura messages</div>
+  <textarea id="sYay"></textarea>
+  <label class="f">YES button <input type="text" id="sYes"></label>
+  <label class="f">Later button <input type="text" id="sLater"></label>
+  <label class="f">Later = evlo min <input type="number" id="sSnooze" min="1" max="60"></label>
+
+  <h4>Other</h4>
+  <label class="chk"><input type="checkbox" id="sNotify"> Mac notification-um anuppu</label>
+  <label class="chk"><input type="checkbox" id="sSound"> Sounds</label>
+  <label class="chk"><input type="checkbox" id="sMeter"> Water meter eppovum kaattu (illaati hover-la mattum)</label>
+  <label class="f">Inniku kudichadhu <input type="number" id="sToday" min="0" max="40"></label>
+
+  <div class="foot"><button class="btn p" id="sSave">Save</button><button class="btn g" id="sCancel">Close</button><button class="btn g" id="sTest">Test reminder</button></div>
+</div>
+<input type="file" id="file" accept="image/png,image/gif,image/webp,image/jpeg,video/mp4,video/webm,video/quicktime" hidden>
+
+<script>
+(() => {
+const isApp = !!window.pf;
+if (!isApp) document.body.classList.add('web');
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+/* ======================= state ======================= */
+const today = () => new Date().toLocaleDateString('en-CA');
+const DEF = {
+  name: '', size: 220, roam: true, lap: true, come: true, speed: 1,
+  interval: 30, goal: 8, qs: 23, qe: 7,
+  eyesOn: true, eyesMin: 20, stretchOn: true, stretchMin: 60, postureOn: false, postureMin: 45,
+  customOn: false, customMin: 120, customText: 'Mail check pannu 📬',
+  notify: true, sound: true, meter: false, keyTol: 70, style: 'float', accent: '#FFD54A',
+  ask: 'Hey, {name}\nDid you drink water?\nOi {name}! Thanni kudichiya? 💧\n{name}, oru glass thanni please 🙏\nWater break time, {name}!',
+  yay: 'Super {name}! 💙\nSemma! Keep going 💪\nThat\'s my {name} 😎',
+  yes: 'YES', later: 'Remind me later', snooze: 10,
+  day: today(), glasses: 0, last: Date.now(), lastE: Date.now(), lastS: Date.now(), lastP: Date.now(), lastC: Date.now(), hist: {}
+};
+let S;
+try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem('pf3') || localStorage.getItem('pf2') || '{}')); } catch { S = { ...DEF }; }
+const save = () => { try { localStorage.setItem('pf3', JSON.stringify(S)); } catch {} };
+const fill = s => String(s).replaceAll('{name}', S.name || 'friend');
+const lines = s => String(s).split('\n').map(l => l.trim()).filter(Boolean);
+const H = () => (S.hist[today()] ||= { w: 0, s: 0, e: 0 });
+function rollDay() {
+  if (S.day !== today()) { S.day = today(); S.glasses = 0; S.last = Date.now(); save(); }
+  H();
+}
+rollDay();
+
+/* ======================= image store (IndexedDB) ======================= */
+const MOODS = [['idle','Normal'],['walk','Nadakkum'],['ask','Kekkum podhu'],['happy','YES apram'],['sleep','Thoongum'],['held','Thookkumbodhu']];
+const FALLBACK = { walk: 'idle', run: 'walk', ask: 'idle', happy: 'idle', sleep: 'idle', held: 'happy', stretch: 'happy', giggle: 'happy', dizzy: 'idle' };
+const IMG = {};
+const BUNDLED = ['idle','walk','ask','happy','sleep','held']; // default avatar clips shipped in renderer/avatars/
+const db = new Promise((res, rej) => { const r = indexedDB.open('pixelfriend', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const tx = (mode, fn) => db.then(d => new Promise((res, rej) => { const t = d.transaction('img', mode); const q = fn(t.objectStore('img')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+const putImg = (k, b) => tx('readwrite', s => s.put(b, k));
+const delImg = k => tx('readwrite', s => s.delete(k));
+const getImg = k => tx('readonly', s => s.get(k));
+async function loadImgs() {
+  for (const [k] of MOODS) { const b = await getImg(k).catch(() => null);
+    if (IMG[k] && !IMG[k].bundled) URL.revokeObjectURL(IMG[k].url); IMG[k] = b ? { url: URL.createObjectURL(b), video: /^video/.test(b.type) } : (BUNDLED.includes(k) ? { url: `avatars/${k}.webp`, video: false, bundled: true } : null); }
+}
+function imgFor(m) { let k = m; for (let i = 0; i < 4 && k; i++) { if (IMG[k]) return IMG[k]; k = FALLBACK[k]; } return IMG.idle || null; }
+
+function removeBg(file) {
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 900 / Math.max(im.width, im.height));
+      const w = Math.round(im.width * k), h = Math.round(im.height * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+      const d = x.getImageData(0, 0, w, h), p = d.data;
+      const corners = [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].map(([a,b]) => { const i = (b*w+a)*4; return [p[i],p[i+1],p[i+2],p[i+3]]; });
+      if (!corners.every(cc => cc[3] < 20)) {
+        const near = i => corners.some(cc => Math.abs(p[i]-cc[0]) + Math.abs(p[i+1]-cc[1]) + Math.abs(p[i+2]-cc[2]) < 60);
+        const seen = new Uint8Array(w*h), st = [];
+        for (let a = 0; a < w; a++) st.push(a, (h-1)*w+a);
+        for (let b = 0; b < h; b++) st.push(b*w, b*w+w-1);
+        while (st.length) { const n = st.pop(); if (seen[n]) continue; seen[n] = 1; const i = n*4; if (!near(i)) continue; p[i+3] = 0;
+          const a = n % w, b = (n / w) | 0;
+          if (a > 0) st.push(n-1); if (a < w-1) st.push(n+1); if (b > 0) st.push(n-w); if (b < h-1) st.push(n+w); }
+        for (let n = 0; n < w*h; n++) { const i = n*4; if (!p[i+3]) continue; const a = n % w, b = (n / w) | 0; let t = 0;
+          if (a > 0 && !p[i-1]) t++; if (a < w-1 && !p[i+7]) t++; if (b > 0 && !p[i-w*4+3]) t++; if (b < h-1 && !p[i+w*4+3]) t++;
+          if (t) p[i+3] = 160; }
+        x.putImageData(d, 0, 0);
+      }
+      let minX = w, minY = h, maxX = 0, maxY = 0;
+      for (let n = 0; n < w*h; n++) if (p[n*4+3] > 40) { const a = n % w, b = (n / w) | 0;
+        if (a < minX) minX = a; if (a > maxX) maxX = a; if (b < minY) minY = b; if (b > maxY) maxY = b; }
+      if (maxX <= minX) { c.toBlob(res, 'image/png'); return; }
+      const o = document.createElement('canvas'); o.width = maxX-minX+1; o.height = maxY-minY+1;
+      o.getContext('2d').drawImage(c, -minX, -minY); o.toBlob(res, 'image/png');
+    };
+    im.src = URL.createObjectURL(file);
+  });
+}
+
+/* ======================= fallback pixel buddy ======================= */
+const SHAPE = [".......oo.......","......obbo......","......obbo......",".....obbbbo.....",".....obbbbo.....","....obbbbbbo....","...obbbbbbbbo...","..obwwbbbbbbbo..","..obwbbbbbbbbo..",".obbbbbbbbbbbbo.",".obbbbbbbbbbbbo.",".obbbbbbbbbbbbo.",".obbbbbbbbbbbbo.",".obbbbbbbbbbbbo.","..obbbbbbbbbbo..","...obbbbbbbbo...","....oooooooo...."];
+const dc = $('drip'), dx = dc.getContext('2d');
+function drawDrip() {
+  dx.clearRect(0, 0, 16, 20);
+  const P = (x, y, c) => { dx.fillStyle = c; dx.fillRect(x, y, 1, 1); };
+  const lvl = Math.min(1, S.glasses / S.goal), fr = 16 - Math.round(lvl * 15), oy = 2;
+  SHAPE.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '.') return;
+    P(x, y+oy, ch === 'o' ? '#0E1A33' : ch === 'w' ? '#fff' : y >= fr ? (y === fr ? '#8AB4F8' : '#4285F4') : '#3D5A8A'); }));
+  const ey = 12, E = '#0E1A33', happy = ['happy','giggle','run','stretch'].includes(mood);
+  if (happy) [[4,ey],[5,ey-1],[6,ey],[9,ey],[10,ey-1],[11,ey]].forEach(([a,b]) => P(a,b,E));
+  else if (mood === 'sleep') [4,5,10,11].forEach(a => P(a,ey,E));
+  else if (mood === 'dizzy') [[4,ey-1],[6,ey-1],[5,ey],[4,ey+1],[6,ey+1],[9,ey-1],[11,ey-1],[10,ey],[9,ey+1],[11,ey+1]].forEach(([a,b]) => P(a,b,E));
+  else [[5,ey-1],[5,ey],[10,ey-1],[10,ey]].forEach(([a,b]) => P(a,b,E));
+  P(3, ey+2, '#F28BB0'); P(12, ey+2, '#F28BB0');
+  if (mood === 'ask' || mood === 'held') { P(6,ey+3,E); P(7,ey+2,E); P(8,ey+2,E); P(9,ey+3,E); }
+  else { P(6,ey+2,E); P(7,ey+3,E); P(8,ey+3,E); P(9,ey+2,E); }
+}
+
+/* ======================= actor rendering ======================= */
+const actor = $('actor'), img = $('char'), flip = $('flip');
+let mood = 'idle', moodTimer;
+function setMood(m, ms) {
+  mood = m; clearTimeout(moodTimer);
+  actor.classList.forEach(c => c.startsWith('m-') && actor.classList.remove(c));
+  void actor.offsetWidth; // restart CSS animation
+  actor.classList.add('m-' + m);
+  const src = imgFor(m);
+  actor.classList.toggle('real', !!IMG[m]);
+  if (src && !src.video && src.bundled && m === 'happy') img.removeAttribute('src'); // replay from start
+  if (src && src.video) {
+    img.style.display = 'none'; dc.style.display = 'none'; vc.style.display = 'block';
+    if (vid.dataset.src !== src.url) { vid.dataset.src = src.url; vid.src = src.url; V.crop = null; V.n = 0; V.key = null; }
+    vid.play().catch(() => {});
+  } else if (src) {
+    vid.pause(); vc.style.display = 'none';
+    img.style.display = 'block'; dc.style.display = 'none'; if (img.getAttribute('src') !== src.url) img.src = src.url;
+  } else { vid.pause(); vc.style.display = 'none'; img.style.display = 'none'; dc.style.display = 'block'; drawDrip(); }
+  A.lockUntil = ms ? Date.now() + ms : 0; // don't wander off in the middle of an action
+  if (ms) moodTimer = setTimeout(() => { if (mood === m) setMood(restMood()); }, ms);
+}
+const restMood = () => asking ? 'ask' : quiet() ? 'sleep' : (A.target != null ? (A.run ? 'run' : 'walk') : 'idle');
+function applyLook() {
+  const r = document.documentElement.style;
+  r.setProperty('--size', S.size + 'px'); r.setProperty('--accent', S.accent || '#FFD54A');
+  dc.style.height = S.size * 0.6 + 'px'; dc.style.width = S.size * 0.48 + 'px';
+  const b = $('bubble'); const sh = b.classList.contains('show'); b.className = S.style + (sh ? ' show' : '');
+  $('meter').classList.toggle('on', !!S.meter);
+  const d = $('drops'); d.innerHTML = '';
+  for (let i = 0; i < S.goal; i++) { const e = document.createElement('i'); if (i < S.glasses) e.className = 'on'; d.appendChild(e); }
+  $('count').innerHTML = `<b>${S.glasses}</b>/${S.goal}`;
+  setMood(mood);
+}
+
+/* ======================= video renderer (live background removal) ======================= */
+const vid = $('vid'), vc = $('vcan'), vx2 = vc.getContext('2d', { willReadFrequently: true });
+const work = document.createElement('canvas'), wx = work.getContext('2d', { willReadFrequently: true });
+const V = { crop: null, n: 0, key: null, last: 0 };
+function drawVideo(t) {
+  if (vc.style.display !== 'block' || vid.readyState < 2 || t - V.last < 33) return; V.last = t;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const scale = (S.size * dpr) / vid.videoHeight * (V.crop ? vid.videoHeight / V.crop.h : 1);
+  const W0 = Math.max(1, Math.round(vid.videoWidth * Math.min(1, 640 / vid.videoHeight))), H0 = Math.max(1, Math.round(vid.videoHeight * Math.min(1, 640 / vid.videoHeight)));
+  if (work.width !== W0 || work.height !== H0) { work.width = W0; work.height = H0; }
+  wx.drawImage(vid, 0, 0, W0, H0);
+  const d = wx.getImageData(0, 0, W0, H0), p = d.data;
+  if (!V.key) { // key colour = average of the four corners
+    const cs = [[2,2],[W0-3,2],[2,H0-3],[W0-3,H0-3]].map(([a,b]) => { const i = (b*W0+a)*4; return [p[i],p[i+1],p[i+2],p[i+3]]; });
+    V.alpha = cs.every(c => c[3] < 20);
+    V.key = [0,1,2].map(j => cs.reduce((s, c) => s + c[j], 0) / 4);
+    V.green = V.key[1] > V.key[0] * 1.2 && V.key[1] > V.key[2] * 1.2;
+  }
+  if (!V.alpha) {
+    const [kr, kg, kb] = V.key, tol = S.keyTol, soft = tol * 1.6;
+    for (let i = 0; i < p.length; i += 4) {
+      const r = p[i], g = p[i+1], b = p[i+2];
+      let dist = Math.abs(r - kr) + Math.abs(g - kg) + Math.abs(b - kb);
+      if (V.green && g > r && g > b) dist = Math.min(dist, (r + b) / 2 + 255 - g); // stronger keying on green-dominant pixels
+      if (dist < tol) p[i+3] = 0;
+      else if (dist < soft) p[i+3] = Math.round(255 * (dist - tol) / (soft - tol));
+      if (V.green && g > Math.max(r, b)) p[i+1] = Math.max(r, b); // remove green spill on edges
+    }
+    wx.putImageData(d, 0, 0);
+  }
+  // learn the character's bounding box over the first frames so the feet sit on the floor
+  if (V.n < 45) {
+    V.n++; let x0 = W0, y0 = H0, x1 = 0, y1 = 0;
+    for (let y = 0; y < H0; y += 2) for (let x = 0; x < W0; x += 2) if (p[(y*W0+x)*4+3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 > x0) { const c = V.crop; V.crop = c ? { x: Math.min(c.x, x0), y: Math.min(c.y, y0), x2: Math.max(c.x2, x1), y2: Math.max(c.y2, y1) } : { x: x0, y: y0, x2: x1, y2: y1 };
+      V.crop.w = V.crop.x2 - V.crop.x + 2; V.crop.h = V.crop.y2 - V.crop.y + 2; }
+  }
+  const c = V.crop || { x: 0, y: 0, w: W0, h: H0 };
+  const outH = Math.round(S.size * dpr), outW = Math.max(1, Math.round(c.w * outH / c.h));
+  if (vc.width !== outW || vc.height !== outH) { vc.width = outW; vc.height = outH; vc.style.height = S.size + 'px'; vc.style.width = (outW / dpr) + 'px'; }
+  vx2.clearRect(0, 0, outW, outH);
+  vx2.drawImage(work, c.x, c.y, c.w, c.h, 0, 0, outW, outH);
+}
+
+/* ======================= physics + movement ======================= */
+const A = { x: innerWidth - 220, y: 0, vx: 0, vy: 0, dir: 1, target: null, run: false, onArrive: null, mode: 'ground', hiddenUntil: 0 };
+const halfW = () => Math.max(40, (vc.style.display === 'block' ? vc.offsetWidth : img.style.display === 'none' ? dc.offsetWidth : img.offsetWidth) / 2);
+const clampX = x => Math.max(halfW() + 4, Math.min(innerWidth - halfW() - 4, x));
+function face(d) { if (d) { A.dir = d; flip.style.transform = `scaleX(${d})`; } }
+// image is assumed to face the viewer / right; scaleX(-1) when walking left looks natural for most avatars
+function goTo(x, run = false, onArrive = null) {
+  A.target = x; A.run = run; A.onArrive = onArrive;
+  face(x > A.x ? 1 : -1); setMood(run ? 'run' : 'walk');
+}
+function stop() { A.target = null; A.run = false; }
+let lastT = performance.now();
+function loop(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+  if (A.mode === 'air') {
+    A.vy -= 2400 * dt; A.x += A.vx * dt; A.y += A.vy * dt;
+    if (A.x < halfW()) { A.x = halfW(); A.vx = -A.vx * .5; }
+    if (A.x > innerWidth - halfW()) { A.x = innerWidth - halfW(); A.vx = -A.vx * .5; }
+    if (A.y > innerHeight - S.size) { A.y = innerHeight - S.size; A.vy = -Math.abs(A.vy) * .3; }
+    if (A.y <= 0) {
+      A.y = 0;
+      if (Math.abs(A.vy) > 650) { A.vy = -A.vy * .35; A.vx *= .6; pop(.6); }
+      else { landed(); }
+    }
+  } else if (A.mode === 'ground' && A.target != null) {
+    const sp = (A.run ? 300 : 80) * S.speed, d = A.target - A.x;
+    if (Math.abs(d) <= sp * dt) { A.x = A.target; const cb = A.onArrive; stop(); face(1); setMood(restMood()); cb && cb(); }
+    else A.x += Math.sign(d) * sp * dt;
+  }
+  actor.style.transform = `translate(${A.x - halfW()}px, ${-A.y}px)`;
+  actor.classList.toggle('air', A.y > 2);
+  keepBubbleOnScreen(); drawVideo(t);
+  requestAnimationFrame(loop);
+}
+function landed() {
+  A.mode = 'ground'; A.vx = A.vy = 0;
+  if (fallSpeed > 1400) { setMood('dizzy', 1900); say(pick(['Aiyo! 😵', 'Ammaa! 🤕', 'Konjam medhuva 😵‍💫']), [], 1900); pop(.4); }
+  else setMood(restMood());
+}
+function keepBubbleOnScreen() {
+  const o = $('over'); o.style.transform = 'translateX(-50%)';
+  const r = o.getBoundingClientRect(); let s = 0;
+  if (r.left < 8) s = 8 - r.left; else if (r.right > innerWidth - 8) s = innerWidth - 8 - r.right;
+  if (s) o.style.transform = `translateX(calc(-50% + ${s}px))`;
+}
+
+/* ======================= brain (idle behaviour) ======================= */
+let nextThink = Date.now() + 4000;
+setInterval(() => {
+  if (Date.now() < A.lockUntil) return;
+  if (Date.now() < nextThink || A.mode !== 'ground' || asking || busy() || A.target != null) return;
+  if (A.hiddenUntil) { if (Date.now() > A.hiddenUntil) comeBack(); return; }
+  if (quiet()) { if (mood !== 'sleep') setMood('sleep'); nextThink = Date.now() + 10000; return; }
+  if (mood === 'sleep') setMood('idle');
+  nextThink = Date.now() + rnd(5000, 14000);
+  if (!S.roam) { if (Math.random() < .3) lookAtMouse(); return; }
+  const r = Math.random();
+  if (r < .55) goTo(clampX(rnd(0, innerWidth)));
+  else if (r < .7) lookAtMouse();
+  else if (r < .78 && mouse.x != null) goTo(clampX(mouse.x + rnd(-150, 150)));
+  else if (r < .82) { setMood('stretch', 2400); }
+}, 700);
+function lookAtMouse() { setMood('ask', 2400); }
+function hideFor(ms) {
+  $('bubble').classList.remove('show'); say(pick(['Bye! Konja neram kalichu varen 👋', 'Seri, naan poren 🙈']), [], 1800);
+  setTimeout(() => goTo(innerWidth + halfW() * 2 + 40, false, () => { actor.classList.add('hidden'); A.hiddenUntil = Date.now() + ms; }), 1200);
+}
+function comeBack() {
+  A.hiddenUntil = 0; actor.classList.remove('hidden'); A.x = innerWidth + halfW() + 20;
+  goTo(clampX(innerWidth - 220), false, () => say(`Naan vandhutten${S.name ? ', ' + S.name : ''}! 😄`, [], 2500));
+}
+function victoryLap(big) {
+  if (!S.lap || A.mode !== 'ground') return;
+  const start = A.x, far = start > innerWidth / 2 ? clampX(80) : clampX(innerWidth - 80);
+  setTimeout(() => goTo(far, true, () => { setTimeout(() => goTo(clampX(start), true), 300); }), 4700);
+  if (big) confetti();
+}
+function confetti() {
+  for (let i = 0; i < 40; i++) { const e = document.createElement('div'); e.className = 'confetti';
+    e.textContent = pick(['💧','🎉','✨','💙','⭐']); e.style.left = rnd(0, innerWidth) + 'px';
+    e.style.animationDuration = rnd(2, 4) + 's'; e.style.animationDelay = rnd(0, .8) + 's';
+    document.body.appendChild(e); setTimeout(() => e.remove(), 5000); }
+}
+
+/* ======================= bubble + sound ======================= */
+let hideT;
+function say(text, buttons = [], ms = 4000) {
+  const b = $('bubble'); $('msg').textContent = text; const a = $('actions'); a.innerHTML = '';
+  buttons.forEach(([label, cls, fn]) => { const e = document.createElement('button'); e.className = 'btn ' + cls; e.textContent = label;
+    e.onclick = ev => { ev.stopPropagation(); fn(); }; a.appendChild(e); });
+  a.style.display = buttons.length ? 'flex' : 'none';
+  b.classList.add('show'); clearTimeout(hideT);
+  if (ms) hideT = setTimeout(() => b.classList.remove('show'), ms);
+}
+let ac;
+function pop(pitch = 1) {
+  if (!S.sound) return;
+  try { ac ||= new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = 'sine'; o.frequency.setValueAtTime(520 * pitch, t); o.frequency.exponentialRampToValueAtTime(980 * pitch, t + .14);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.14, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .25);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(t + .3); } catch {}
+}
+function fx(text) { const e = document.createElement('div'); e.className = 'fx'; e.textContent = text;
+  e.style.left = '50%'; e.style.top = '15%'; e.style.transform = 'translateX(-50%)'; $('charWrap').appendChild(e); setTimeout(() => e.remove(), 1500); }
+
+/* ======================= reminders ======================= */
+let asking = null;
+const quiet = () => { const h = new Date().getHours(); return S.qs > S.qe ? (h >= S.qs || h < S.qe) : (h >= S.qs && h < S.qe); };
+const busy = () => $('settings').classList.contains('show') || $('stats').classList.contains('show') || A.mode !== 'ground';
+function waterQuestion() {
+  const L = lines(S.ask);
+  if (L.length >= 2 && /^hey/i.test(L[0]) && !/[?!]$/.test(L[0])) { const o = [L[0] + '\n' + L[1], ...L.slice(2)]; return pick(o); }
+  return pick(L) || 'Did you drink water?';
+}
+const KINDS = {
+  water:   { key: 'last',  on: () => true,         min: () => S.interval,
+             q: () => fill(waterQuestion()), yes: () => S.yes, later: () => S.later, done: drink },
+  eyes:    { key: 'lastE', on: () => S.eyesOn,      min: () => S.eyesMin,
+             q: () => fill('{name}, eye break! 👀\nScreen-a vittu 20 feet dhoorathula\n20 second paaru'), yes: () => 'Start 20s', later: () => S.later, done: eyeBreak },
+  stretch: { key: 'lastS', on: () => S.stretchOn,   min: () => S.stretchMin,
+             q: () => fill('Stretch time, {name}! 🙆\nEzhundhu kai-ya mela thookki stretch pannu'), yes: () => 'Done ✓', later: () => S.later, done: stretched },
+  posture: { key: 'lastP', on: () => S.postureOn,   min: () => S.postureMin,
+             q: () => fill('Posture check! 🧍\nMudhugu nimirndhu ukkaaru, {name}'), yes: () => 'Ok 👍', later: () => S.later, done: () => simpleDone('lastP', 'Good posture! 😎') },
+  custom:  { key: 'lastC', on: () => S.customOn,    min: () => S.customMin,
+             q: () => fill(S.customText || 'Reminder!'), yes: () => 'Done ✓', later: () => S.later, done: () => simpleDone('lastC', 'Done! 👍') }
+};
+function remind(kind = 'water') {
+  const K = KINDS[kind]; asking = kind;
+  const ask = () => {
+    face(1);
+    setMood(kind === 'stretch' ? 'stretch' : 'ask');
+    say(K.q(), [[K.yes(), 'p', K.done], [K.later(), 'g', () => snooze(kind)]], 0); pop(.8);
+  };
+  if (S.come && mouse.x != null && A.mode === 'ground' && Math.abs(mouse.x - A.x) > 160) goTo(clampX(mouse.x + (mouse.x > A.x ? -140 : 140)), true, ask);
+  else { stop(); ask(); }
+  if (isApp && S.notify) window.pf.notify('PixelFriend', K.q().replace(/\n/g, ' '));
+}
+function snooze(kind) {
+  const K = KINDS[kind]; asking = null;
+  S[K.key] = Date.now() - (K.min() - S.snooze) * 60000; save();
+  $('bubble').classList.remove('show'); setMood('idle'); say(`Seri, ${S.snooze} min la thirumba kekuren 👍`, [], 1800);
+}
+function drink() {
+  rollDay(); if (asking === 'water') asking = null;
+  S.glasses++; H().w++; S.last = Date.now(); save(); applyLook();
+  stop(); face(1); setMood('happy', 4600); pop(1.1); fx('+1 💧');
+  const goal = S.glasses === S.goal;
+  say(goal ? `Goal complete! 🎉 ${S.goal}/${S.goal}\nInniku full hydrated, ${S.name || 'friend'}!` : fill(pick(lines(S.yay)) || 'Nice!'), [], 4200);
+  victoryLap(goal);
+}
+function eyeBreak() {
+  let n = 20; setMood('idle'); $('actions').style.display = 'none';
+  const tick = () => {
+    if (asking !== 'eyes') return;
+    if (n <= 0) { asking = null; S.lastE = Date.now(); H().e++; save(); setMood('happy', 2000); pop(1.2); say('Super! Kann happy 😌', [], 2200); return; }
+    say(`Dhoorathula paaru… 👀\n${n}`, [['Skip', 'g', () => { n = 0; tick(); }]], 0); n--; setTimeout(tick, 1000);
+  };
+  tick();
+}
+function stretched() { asking = null; S.lastS = Date.now(); H().s++; save(); setMood('stretch', 2400); pop(1.2); fx('🙆'); say('Semma stretch! 💪', [], 2200); }
+function simpleDone(key, text) { asking = null; S[key] = Date.now(); save(); setMood('happy', 1800); pop(1.1); say(text, [], 2000); }
+setInterval(() => {
+  rollDay();
+  if (asking || busy() || A.hiddenUntil || quiet() || A.target != null || Date.now() < A.lockUntil) return;
+  for (const kind of ['water', 'eyes', 'stretch', 'posture', 'custom']) {
+    const K = KINDS[kind];
+    if (K.on() && Date.now() - S[K.key] >= K.min() * 60000) { remind(kind); return; }
+  }
+}, 5000);
+
+/* ======================= mouse: drag, throw, pet, click ======================= */
+const mouse = { x: null, y: null };
+const cw = $('charWrap');
+let down = null, dragging = false, track = [], fallSpeed = 0, petMoves = [], lastPetDir = 0, overSince = 0;
+cw.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  down = { x: e.clientX, y: e.clientY, ox: e.clientX - A.x, oy: (innerHeight - e.clientY) - A.y, t: Date.now() };
+  dragging = false; track = [];
+});
+window.addEventListener('mousemove', e => {
+  const px = mouse.x; mouse.x = e.clientX; mouse.y = e.clientY;
+  if (down) {
+    if (!dragging && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) {
+      dragging = true; stop(); A.mode = 'drag'; actor.classList.add('drag'); setMood('held');
+      if (!asking) say(pick(['Hey! Keezha vidu 😆', 'Wheee! 🙌', 'Enna thookureenga? 😳']), [], 1500);
+    }
+    if (dragging) {
+      A.x = e.clientX - down.ox; A.y = Math.max(0, (innerHeight - e.clientY) - down.oy);
+      track.push({ x: e.clientX, y: e.clientY, t: performance.now() }); if (track.length > 6) track.shift();
+    }
+    return;
+  }
+  // petting: wiggle the mouse left-right over the avatar
+  if (overActor(e)) {
+    if (!overSince) overSince = Date.now();
+    const d = Math.sign(e.clientX - (px ?? e.clientX));
+    if (d && d !== lastPetDir) { lastPetDir = d; petMoves.push(Date.now()); petMoves = petMoves.filter(t => Date.now() - t < 1200);
+      if (petMoves.length >= 6 && !asking && A.mode === 'ground') { petMoves = []; stop(); setMood('giggle', 1200); fx(pick(['💖','😆','🥰']));
+        say(pick(['Hehe! Kichu kichu 😆', 'Aww 🥰', 'Innum konjam 😊']), [], 1600); pop(1.3); } }
+  } else { overSince = 0; petMoves = []; }
+});
+window.addEventListener('mouseup', e => {
+  if (!down) return;
+  if (dragging) {
+    actor.classList.remove('drag');
+    const a = track[0], b = track[track.length - 1]; let vx = 0, vy = 0;
+    if (a && b && b.t > a.t) { const s = (b.t - a.t) / 1000; vx = (b.x - a.x) / s; vy = -(b.y - a.y) / s; }
+    A.vx = Math.max(-2500, Math.min(2500, vx)); A.vy = Math.max(-2500, Math.min(2500, vy));
+    fallSpeed = Math.hypot(A.vx, A.vy) + Math.sqrt(2 * 2400 * Math.max(0, A.y));
+    A.mode = 'air'; if (!asking) setMood('held');
+  } else { click(); }
+  down = null; dragging = false;
+});
+let clickT;
+function click() {
+  clearTimeout(clickT);
+  clickT = setTimeout(() => {
+    if (asking) return;
+    stop(); face(1); setMood('ask', 2600); pop(1);
+    const left = Math.max(0, Math.ceil((S.interval * 60000 - (Date.now() - S.last)) / 60000));
+    say(pick([
+      `Hi ${S.name || ''}! 👋`.replace(' !', '!'),
+      `Adutha water break ${left} min la 💧`,
+      `Inniku ${S.glasses}/${S.goal} glass 💧`,
+      'Double-click = kudichitten 😉',
+      'Right-click panni paaru 👀'
+    ]), [], 2600);
+  }, 250);
+}
+cw.addEventListener('dblclick', () => { clearTimeout(clickT); if (asking && asking !== 'water') return; drink(); });
+function overActor(e) { const r = cw.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
+
+/* right-click menu */
+const menu = $('menu');
+cw.addEventListener('contextmenu', e => {
+  e.preventDefault(); menu.classList.add('show');
+  menu.style.left = Math.min(e.clientX, innerWidth - 220) + 'px'; menu.style.top = Math.min(e.clientY, innerHeight - 280) + 'px';
+});
+window.addEventListener('mousedown', e => { if (!menu.contains(e.target)) menu.classList.remove('show'); }, true);
+menu.addEventListener('click', e => {
+  const a = e.target.dataset.a; if (!a) return; menu.classList.remove('show');
+  ({ drink, stretch: stretched, run: () => victoryLap(false) || (S.lap ? 0 : goTo(clampX(rnd(0, innerWidth)), true)),
+     come: () => mouse.x != null && goTo(clampX(mouse.x), true, () => say('Vandhutten! 😄', [], 1800)),
+     stats: openStats, settings: openSettings, hide: () => hideFor(3600000) })[a]?.();
+});
+
+/* click-through for the desktop window */
+if (isApp) {
+  const hit = el => el && el.closest('#charWrap,#bubble.show,#menu.show,.panel.show');
+  let ignoring = true;
+  window.addEventListener('mousemove', e => {
+    const want = !(down || hit(document.elementFromPoint(e.clientX, e.clientY)));
+    if (want !== ignoring) { ignoring = want; window.pf.ignoreMouse(want); }
+  });
+  window.pf.on('drink', drink);
+  window.pf.on('remind', () => remind('water'));
+  window.pf.on('run', () => goTo(clampX(A.x > innerWidth / 2 ? 80 : innerWidth - 80), true));
+  window.pf.on('stats', openStats);
+  window.pf.on('settings', openSettings);
+  window.pf.on('hide', () => hideFor(3600000));
+}
+
+/* ======================= stats ======================= */
+function streak() {
+  let n = 0; const d = new Date();
+  if (!((S.hist[today()] || {}).w >= S.goal)) d.setDate(d.getDate() - 1);
+  for (;;) { const k = d.toLocaleDateString('en-CA'); if ((S.hist[k] || {}).w >= S.goal) { n++; d.setDate(d.getDate() - 1); } else break; }
+  return n;
+}
+function openStats() {
+  rollDay(); const h = H();
+  $('kW').textContent = `${S.glasses}/${S.goal}`; $('kSt').textContent = streak() + ' 🔥';
+  $('kS').textContent = h.s; $('kE').textContent = h.e;
+  $('stSub').textContent = S.name ? `${S.name}-oda hydration report` : 'Hydration report';
+  const bars = $('bars'); bars.innerHTML = '';
+  const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
+  const max = Math.max(S.goal, ...days.map(d => (S.hist[d.toLocaleDateString('en-CA')] || {}).w || 0));
+  days.forEach(d => { const w = (S.hist[d.toLocaleDateString('en-CA')] || {}).w || 0;
+    const b = document.createElement('div'); b.className = 'bar';
+    b.innerHTML = `<span>${w}</span><i class="${w >= S.goal ? 'met' : ''}" style="height:${Math.round(80 * w / max)}px"></i><span>${d.toLocaleDateString('en', { weekday: 'short' })}</span>`;
+    bars.appendChild(b); });
+  $('stats').classList.add('show'); if (isApp) window.pf.focus();
+}
+$('stClose').onclick = () => $('stats').classList.remove('show');
+
+/* ======================= settings ======================= */
+const F = { sName: 'name', sSize: 'size', sSpeed: 'speed', sInterval: 'interval', sGoal: 'goal', sQs: 'qs', sQe: 'qe',
+  mEyes: 'eyesMin', mStretch: 'stretchMin', mPosture: 'postureMin', mCustom: 'customMin', sCustomText: 'customText',
+  sStyle: 'style', sAccent: 'accent', sKeyTol: 'keyTol', sAsk: 'ask', sYay: 'yay', sYes: 'yes', sLater: 'later', sSnooze: 'snooze', sToday: 'glasses' };
+const B = { sRoam: 'roam', sLap: 'lap', sCome: 'come', rEyes: 'eyesOn', rStretch: 'stretchOn', rPosture: 'postureOn', rCustom: 'customOn',
+  sNotify: 'notify', sSound: 'sound', sMeter: 'meter' };
+let slotTarget = null;
+function renderSlots() {
+  const box = $('slots'); box.innerHTML = '';
+  MOODS.forEach(([k, label]) => {
+    const s = document.createElement('div'); s.className = 'slot' + (IMG[k] && !IMG[k].bundled ? ' filled' : '');
+    const I = IMG[k];
+    s.innerHTML = `<div class="th" style="${I && !I.video ? `background-image:url(${I.url})` : ''}">${I && I.video ? `<video src="${I.url}" muted autoplay loop playsinline></video>` : ''}</div>${I && I.video ? '<span class="vb">🎬</span>' : ''}<span>${label}</span><span class="x" title="Remove">✕</span>`;
+    s.onclick = e => {
+      if (e.target.classList.contains('x')) { delImg(k).then(loadImgs).then(() => { renderSlots(); setMood(mood); }); return; }
+      slotTarget = k; $('file').click();
+    };
+    box.appendChild(s);
+  });
+}
+$('file').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f || !slotTarget) return;
+  const blob = ($('sRemoveBg').checked && /^image\/(png|jpeg|webp)/.test(f.type)) ? await removeBg(f) : f;
+  await putImg(slotTarget, blob); await loadImgs(); renderSlots(); setMood(slotTarget, 2500);
+};
+function openSettings() {
+  for (const [id, k] of Object.entries(F)) $(id).value = S[k];
+  for (const [id, k] of Object.entries(B)) $(id).checked = !!S[k];
+  renderSlots(); $('settings').classList.add('show');
+  if (A.hiddenUntil) comeBack();
+  if (isApp) window.pf.focus();
+}
+$('sSize').oninput = e => document.documentElement.style.setProperty('--size', e.target.value + 'px');
+function saveSettings() {
+  for (const [id, k] of Object.entries(F)) { const v = $(id).value; S[k] = typeof DEF[k] === 'number' ? Math.max(0, +v || 0) : v; }
+  for (const [id, k] of Object.entries(B)) S[k] = $(id).checked;
+  S.interval = Math.max(1, S.interval); S.goal = Math.max(1, S.goal); S.snooze = Math.max(1, S.snooze); S.speed = S.speed || 1;
+  for (const k of ['eyesMin', 'stretchMin', 'postureMin', 'customMin']) S[k] = Math.max(1, S[k]);
+  if (!S.ask.trim()) S.ask = DEF.ask; if (!S.yay.trim()) S.yay = DEF.yay;
+  H().w = Math.max(H().w, S.glasses);
+  save(); applyLook(); $('settings').classList.remove('show');
+}
+$('sSave').onclick = () => { saveSettings(); say('Saved ✓', [], 1500); };
+$('sCancel').onclick = () => { applyLook(); $('settings').classList.remove('show'); };
+$('sTest').onclick = () => { saveSettings(); setTimeout(() => remind('water'), 300); };
+$('wCustom').onclick = openSettings; $('wTest').onclick = () => remind('water'); $('wStats').onclick = openStats;
+addEventListener('resize', () => { A.x = clampX(A.x); });
+
+/* ======================= start ======================= */
+loadImgs().catch(() => {}).then(() => {
+  applyLook(); face(1); A.x = clampX(innerWidth - 220);
+  setMood(quiet() ? 'sleep' : 'idle');
+  requestAnimationFrame(loop);
+  setTimeout(() => say(S.name ? `Hi ${S.name}! 👋` : 'Hi! Ennai right-click pannunga 👋', [], 3500), 700);
+  if (!S.name && isApp) setTimeout(openSettings, 1800);
+});
+})();
+</script>
+</body>
+</html>

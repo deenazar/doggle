@@ -1,0 +1,13 @@
+{
+  "README.md": "dabc4a0087121868471a201c77e91784400e112fbb744b9ca6c748363d88f765",
+  "main.js": "a778725415b366ddc30c4271bc3667344b08abd9ba3da528ce0e10fefbb41726",
+  "package.json": "e76f91f5e83186d16e739476be2f0675f78e7be5a675d6b6ddbbaef5949ca178",
+  "preload.js": "159bd2d448c09047e4a4afb7442ee97900d906d198aace1793a50f82bd29a067",
+  "renderer/avatars/ask.webp": "1afdb44c16d1d159391c73691260fc3a82a2be4b159694c87b1c339a9e9b37bc",
+  "renderer/avatars/happy.webp": "0c3cd9823e2cd4f45036415c410158e15584077e13e48401f8d6a82c05772c1a",
+  "renderer/avatars/held.webp": "94389016f4a500af38295d937d0960dd200ce480369ebb7121bb54aff80c5cdc",
+  "renderer/avatars/idle.webp": "0f212fb21ba267addb5465d9c6ec0dac2f732902bb3a7b9b1214661910baff39",
+  "renderer/avatars/sleep.webp": "692d80546ff4993f80ab238e22b37278b36dd5641fefa19a0f9e981c6c27fd53",
+  "renderer/avatars/walk.webp": "75d8d4f5f85d71dbd4d6c0f49360b7589b41143d2ba3e4129d7ff1ad9bb71b03",
+  "renderer/index.html": "cef9c2b0883ff297ad96367590dcbb4490f8e094e38389d0b9b43ee1dca71bcf"
+}
