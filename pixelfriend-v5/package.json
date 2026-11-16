@@ -1,11 +1,12 @@
 {
   "name": "pixelfriend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A tiny pixel desktop buddy that reminds you to drink water.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test": "node --test test/*.test.js"
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -14,9 +15,21 @@
   "build": {
     "appId": "com.pixelfriend.app",
     "productName": "PixelFriend",
-    "files": ["main.js", "preload.js", "renderer/**/*"],
-    "mac": { "target": "dmg" },
-    "win": { "target": "nsis" },
-    "linux": { "target": "AppImage" }
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "agent-preload.js",
+      "agent/**/*"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
