@@ -1,21 +1,20 @@
-# doggle
+# Toggle
 
-## PixelFriend
+A personal desktop companion with a blue animated welcome, a customization studio and real 3D characters. Built with Electron, JavaScript, HTML/CSS and Three.js.
 
-The extracted `PixelFriend-v5.zip` desktop companion and subsequent updates live in
-[`pixelfriend-v5/`](pixelfriend-v5/). It is an **Electron / JavaScript** application,
-not a Python application.
+![Toggle Studio](docs/images/toggle-studio.png)
 
 ```sh
 cd pixelfriend-v5
-npm install
+npm install --include=dev
 npm start
 ```
 
-See the [technical review](docs/pixelfriend-v5-analysis.md) for architecture,
-known issues, verification results and desktop testing limitations. The initial import’s original file
-checksums are in [the SHA-256 manifest](docs/pixelfriend-v5-sha256.json).
+Open **Toggle Studio** from the tray or the companion's right-click menu. Customize the built-in Orbit robot, import a self-contained `.glb`, configure reminders, and use local notes / approved file and email actions. Ollama is on hold; these studio controls do not need local AI.
 
-## Local personal agent (v1.1)
+- [Studio setup, 3D workflow and validation](docs/toggle-studio.md)
+- [Google OAuth configuration and v1.1 agent reference](docs/personal-agent.md)
+- [Initial source review](docs/pixelfriend-v5-analysis.md)
+- [Historical original-import checksums](docs/pixelfriend-v5-sha256.json)
 
-Tamil/English Ollama chat, local notes, approval-based Downloads organization and email sending, Gmail/Calendar notifications and weather alerts are available from the tray menu. Follow the [personal-agent setup guide](docs/personal-agent.md) for Ollama and Google OAuth setup, capability limits and validation.
+The source folder remains `pixelfriend-v5/` for compatibility. It is an Electron application, not Python. The original imported source and assets are available in repository history; the checksum manifest describes that initial import, not subsequent changes.
