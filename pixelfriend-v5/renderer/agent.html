@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>PixelFriend · Personal Agent</title>
+<link rel="stylesheet" href="agent.css">
+<script src="agent.js" defer></script>
+</head>
+<body>
+<header><div><h1>PixelFriend <span>Personal Agent</span></h1><p>உங்கள் Mac-ல் இயங்கும் தமிழ் உதவியாளர்</p></div><button id="settingsToggle">Settings</button></header>
+<main>
+<section id="settings" hidden>
+<h2>Local AI</h2><p>Open Ollama, then run <code>ollama pull qwen3:4b</code>. Chat is processed on this Mac. Google and weather features need Internet.</p>
+<label>Ollama model <input id="model" value="qwen3:4b" maxlength="100" list="models"></label><datalist id="models"></datalist><button id="checkModels">Check Ollama</button>
+<h2>Gmail + Google Calendar</h2><p id="connection">Not connected</p>
+<p>Use a Google OAuth <strong>Desktop app</strong> client with Gmail API and Google Calendar API enabled. See <code>docs/personal-agent.md</code> for setup. Credentials are encrypted using OS storage.</p>
+<label>Client ID <input id="clientId" autocomplete="off" placeholder="…apps.googleusercontent.com"></label>
+<label>Client secret <input id="clientSecret" type="password" autocomplete="off"></label>
+<button id="connect">Connect Google</button><button id="disconnect" class="secondary">Disconnect locally</button>
+<label class="check"><input type="checkbox" id="notifications"> App திறந்திருக்கும் போது Gmail / Calendar notifications</label>
+<p class="muted">Checks every minute: latest 10 unread inbox messages and primary calendar events starting within 10 minutes. This does not read other apps’ notifications. Existing mail is skipped on the first check.</p>
+<h2>Weather alerts</h2><label>City <input id="city" placeholder="Chennai" maxlength="100"></label><button id="searchCity">Search location</button>
+<label>Location <select id="place"><option value="">Select a location</option></select></label>
+<label>Heat threshold (°C) <input id="heatThreshold" type="number" min="20" max="50" value="32"></label>
+<label class="check"><input type="checkbox" id="weatherAlerts"> வெப்பநிலை அதிகரித்தால் தெரிவிக்கவும்</label>
+<p class="muted">Checks every 30 minutes while the app runs. Alerts when temperature reaches your threshold, and rearms after it falls below. Weather: Open-Meteo. City and coordinates go to this service.</p>
+<button id="save">Save settings</button><button id="notes" class="secondary">Open local notes</button>
+</section>
+<div id="status" role="status" aria-live="polite">Ready</div>
+<section id="conversation" aria-label="Conversation" aria-live="polite"><article class="assistant">வணக்கம்! Notes எழுதலாம், Downloads ஒழுங்குபடுத்த preview பார்க்கலாம், email draft தயாரிக்கலாம். முதலில் Settings-ல் Ollama மற்றும் Google இணைப்பை அமைக்கவும்.</article></section>
+<section id="approvals" aria-label="Actions awaiting your approval"></section>
+<form id="chatForm"><label for="message">என்ன செய்ய வேண்டும்?</label><textarea id="message" rows="3" maxlength="8000" placeholder="நாளைய meeting-க்கு ஒரு note எழுது…" required></textarea><div class="compose"><span>தமிழ் / English · Text chat</span><button id="send" type="submit">அனுப்பு →</button></div></form>
+<p class="muted">Email அனுப்புவதற்கும் files நகர்த்துவதற்கும் உங்கள் approval தேவை. Preview-கள் 15 நிமிடங்களில் காலாவதியாகும்.</p>
+</main>
+</body></html>

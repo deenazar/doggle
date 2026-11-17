@@ -161,6 +161,7 @@ body.web #webbar{display:flex}
 </div>
 
 <div id="menu">
+  <div data-a="agent">💬 Personal Agent · தமிழ்</div>
   <div data-a="drink">💧 Thanni kudichitten</div>
   <div data-a="stretch">🙆 Stretch pannitten</div>
   <div data-a="run">🏃 Oru round odu</div>
@@ -664,12 +665,12 @@ function overActor(e) { const r = cw.getBoundingClientRect(); return e.clientX >
 const menu = $('menu');
 cw.addEventListener('contextmenu', e => {
   e.preventDefault(); menu.classList.add('show');
-  menu.style.left = Math.min(e.clientX, innerWidth - 220) + 'px'; menu.style.top = Math.min(e.clientY, innerHeight - 280) + 'px';
+  menu.style.left = Math.min(e.clientX, innerWidth - 220) + 'px'; menu.style.top = Math.min(e.clientY, Math.max(0, innerHeight - menu.offsetHeight - 8)) + 'px';
 });
 window.addEventListener('mousedown', e => { if (!menu.contains(e.target)) menu.classList.remove('show'); }, true);
 menu.addEventListener('click', e => {
   const a = e.target.dataset.a; if (!a) return; menu.classList.remove('show');
-  ({ drink, stretch: stretched, run: () => victoryLap(false) || (S.lap ? 0 : goTo(clampX(rnd(0, innerWidth)), true)),
+  ({ agent: () => window.pf?.openAgent?.(), drink, stretch: stretched, run: () => victoryLap(false) || (S.lap ? 0 : goTo(clampX(rnd(0, innerWidth)), true)),
      come: () => mouse.x != null && goTo(clampX(mouse.x), true, () => say('Vandhutten! 😄', [], 1800)),
      stats: openStats, settings: openSettings, hide: () => hideFor(3600000) })[a]?.();
 });
@@ -681,6 +682,10 @@ if (isApp) {
   window.addEventListener('mousemove', e => {
     const want = !(down || hit(document.elementFromPoint(e.clientX, e.clientY)));
     if (want !== ignoring) { ignoring = want; window.pf.ignoreMouse(want); }
+  });
+  window.pf.on('agent-alert', ({ title, body }) => {
+    if (asking || busy() || A.hiddenUntil) return;
+    stop(); setMood('ask', 8000); say(`${title}\n${String(body).slice(0, 240)}`, [], 8000);
   });
   window.pf.on('drink', drink);
   window.pf.on('remind', () => remind('water'));
