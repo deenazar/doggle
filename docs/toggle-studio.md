@@ -1,10 +1,10 @@
 # Toggle Studio
 
-Toggle opens with a short blue logo animation and a character studio on a white grid. The preview starts with the original animated character. Select a mood to see its built-in animation. The sidebar also opens Reminders, Connections, and Files & Notes.
+Toggle opens with a short blue logo animation and a character studio on a white grid. The preview starts with the original animated character. Select a mood to see its built-in animation. The top navigation also opens Reminders, Connections, and Files & Notes.
 
 ![Toggle Studio](images/toggle-studio.png)
 
-Change the character's name, size, speed, bubble accent and wandering behavior, then choose **Apply to desktop**. Expand **Fine-tune your companion** for sound, celebration laps and bubble style. The **Character guide** opens the existing desktop editor where you can replace individual mood images or videos. Removing an upload restores that slot's built-in animation.
+Change the character's name, size, speed, bubble accent and wandering behavior, then choose **Apply to desktop**. Sound and the water progress meter are in **Companion profile**. Expand **Fine-tune your companion** for celebration laps and bubble style. The **Character guide** opens the existing desktop editor where you can replace individual mood images or videos. Removing an upload restores that slot's built-in animation.
 
 The desktop uses the original image and video avatar system. If an earlier preview build used a 3D model, Toggle resumes using the image avatar. Existing image and video overrides are kept.
 

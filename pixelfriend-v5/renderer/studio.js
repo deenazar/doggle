@@ -31,7 +31,9 @@ const moodButtons = document.querySelectorAll('[data-mood]');
 for (const button of moodButtons) {
   button.addEventListener('click', () => {
     previewImage.src = 'avatars/' + button.dataset.mood + '.webp';
-    previewImage.alt = 'Original character preview: ' + button.textContent;
+    const moodName = button.textContent.trim();
+    previewImage.alt = 'Original character preview: ' + moodName;
+    $('previewMood').textContent = moodName;
     for (const moodButton of moodButtons) {
       moodButton.setAttribute('aria-pressed', String(moodButton === button));
     }
