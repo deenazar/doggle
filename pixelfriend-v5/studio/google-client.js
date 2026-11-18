@@ -1,16 +1,13 @@
 'use strict';
 
-const fs = require('node:fs/promises');
-
-async function readDesktopClient(file) {
-  const data = JSON.parse(await fs.readFile(file, 'utf8'));
-  const id = data?.installed?.client_id;
-  const secret = data?.installed?.client_secret;
-  if (typeof id !== 'string' || id.length > 300 || !/^[a-zA-Z0-9.-]+\.apps\.googleusercontent\.com$/.test(id) ||
-      typeof secret !== 'string' || !secret.trim() || secret.length > 300) {
-    throw new Error('Expected a Google Desktop OAuth client.');
+function publisherRegistration(env) {
+  const clientId = env.TOGGLE_GOOGLE_CLIENT_ID;
+  const clientSecret = env.TOGGLE_GOOGLE_CLIENT_SECRET;
+  if (typeof clientId !== 'string' || !/^[A-Za-z0-9.-]+\.apps\.googleusercontent\.com$/.test(clientId) ||
+      typeof clientSecret !== 'string' || !clientSecret.trim()) {
+    throw new Error('The publisher must configure the Google Desktop client for this build.');
   }
-  return { client_id: id, client_secret: secret };
+  return { clientId, clientSecret };
 }
 
-module.exports = { readDesktopClient };
+module.exports = { publisherRegistration };

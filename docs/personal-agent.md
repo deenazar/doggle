@@ -50,7 +50,7 @@ Choose **Sign in with Google** in the welcome screen or in **Connections**. Sele
 
 ### Release maintainer setup
 
-Enable the Gmail API and Google Calendar API in the app's Google Cloud project. Configure its OAuth consent screen and create a **Desktop app** OAuth client. Save its downloaded JSON at `pixelfriend-v5/.local/google-client.json` on the build machine, or set `TOGGLE_GOOGLE_CLIENT_FILE` to its path. The same configuration works for development runs. The packager includes only the desktop client registration ID and secret in the application resources. Desktop OAuth registration is public client information recoverable from the distributed app. Account tokens are created on each user's device after consent.
+Enable the Gmail API and Google Calendar API in the app's Google Cloud project. Configure its OAuth consent screen and create a **Desktop app** OAuth client. Set `TOGGLE_GOOGLE_CLIENT_ID` and `TOGGLE_GOOGLE_CLIENT_SECRET` in the publisher’s build environment and run `npm run dist`. The packager embeds these two native-client registration fields in Toggle. The installed app reads its own registration, opens the default browser, and accepts each person’s Google consent. For publisher development runs, the same environment variables enable sign-in. Desktop app registration is recoverable from the distributed app. Account tokens are created on each user's device after consent.
 
 While the OAuth project is in Testing, grant access to the intended test accounts. To distribute to the public, publish the consent configuration and complete Google's applicable verification for the requested scopes. Testing-mode refresh tokens may expire after seven days. The app uses a loopback callback with PKCE and state validation.
 

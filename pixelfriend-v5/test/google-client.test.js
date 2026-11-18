@@ -1,30 +1,13 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs/promises');
-const os = require('node:os');
-const path = require('node:path');
-const packageClient = require('../build/package-google-client');
-const { readDesktopClient } = require('../studio/google-client');
 const { Google } = require('../agent/google');
+const { publisherRegistration } = require('../studio/google-client');
 
-test('packaging stages only desktop registration fields where the Mac runtime reads them', async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'toggle-build-'));
-  t.after(() => fs.rm(dir, { recursive: true, force: true }));
-  const file = path.join(dir, 'source.json');
-  const installed = { client_id: 'test.apps.googleusercontent.com', client_secret: 'sample' };
-  await fs.writeFile(file, JSON.stringify({ installed: { ...installed, project_id: 'test' }, tokens: 'dummy' }));
-  const before = process.env.TOGGLE_GOOGLE_CLIENT_FILE;
-  process.env.TOGGLE_GOOGLE_CLIENT_FILE = file;
-  t.after(() => { if (before === undefined) delete process.env.TOGGLE_GOOGLE_CLIENT_FILE; else process.env.TOGGLE_GOOGLE_CLIENT_FILE = before; });
-  const resources = path.join(dir, 'Toggle.app/Contents/Resources');
-  await fs.mkdir(resources, { recursive: true });
-  await packageClient({ appOutDir: dir, electronPlatformName: 'darwin', packager: { appInfo: { productFilename: 'Toggle' } } });
-  const output = path.join(resources, 'google-client.json');
-  assert.deepEqual(JSON.parse(await fs.readFile(output)), { installed });
-  assert.deepEqual(await readDesktopClient(output), installed);
-  await fs.writeFile(file, JSON.stringify({ web: installed }));
-  await assert.rejects(readDesktopClient(file));
+test('release registration uses only the publisher identity and needs no end-user file', () => {
+  const env = { TOGGLE_GOOGLE_CLIENT_ID: 'test.apps.googleusercontent.com', TOGGLE_GOOGLE_CLIENT_SECRET: 'sample', refresh_token: 'ignore' };
+  assert.deepEqual(publisherRegistration(env), { clientId: env.TOGGLE_GOOGLE_CLIENT_ID, clientSecret: 'sample' });
+  assert.throws(() => publisherRegistration({}), /publisher/);
 });
 
 test('leaving browser sign-in for guest mode stores no tokens', async () => {
@@ -56,6 +39,7 @@ test('one browser consent grants Gmail read/send and Calendar read before saving
     openExternal: async url => {
       const params = new URL(url).searchParams;
       assert.deepEqual(params.get('scope').split(' '), scopes);
+      assert.equal(params.get('prompt'), 'select_account consent');
       const callback = new URL(params.get('redirect_uri'));
       callback.search = new URLSearchParams({ code: 'example', state: params.get('state') });
       await new Promise((resolve, reject) => {

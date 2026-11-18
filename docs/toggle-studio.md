@@ -21,7 +21,7 @@ npm install --include=dev
 npm start
 ```
 
-For a source checkout, run `npm run google:setup` once and choose the Desktop OAuth JSON to enable sign-in. The private registration stays in the ignored `.local` directory.
+In the distributed Toggle app, choose **Sign in with Google**. Google asks for account selection and consent in your browser. **Continue as guest** opens the local tools.
 
 To package a Mac installer on macOS, configure the publisher’s Desktop OAuth client as described in the [release maintainer setup](personal-agent.md#release-maintainer-setup), then run:
 

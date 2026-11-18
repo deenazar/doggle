@@ -34,24 +34,21 @@ function openAgent() {
   agentWindow.loadFile(path.join(__dirname, 'renderer', 'agent.html'));
   agentWindow.on('closed', () => { agentWindow = null; });
 }
-const { readDesktopClient } = require('./studio/google-client');
+const { publisherRegistration } = require('./studio/google-client');
+const releaseRegistration = require('./package.json').googleDesktop;
 let signIn;
 async function connectGoogle() {
   if (signIn) throw new Error('Google sign-in is already open in your browser.');
   if (!agentService.encryptedAvailable()) throw new Error('Unlock your system keychain to sign in.');
   signIn = new AbortController();
   try {
-    const file = app.isPackaged ? path.join(process.resourcesPath, 'google-client.json')
-      : process.env.TOGGLE_GOOGLE_CLIENT_FILE || path.join(__dirname, '.local', 'google-client.json');
-    let client;
-    try { client = await readDesktopClient(file); }
-    catch (error) {
-      const reason = error.code === 'ENOENT' ? 'missing' : 'unreadable or invalid';
-      if (app.isPackaged) throw new Error('The Google configuration in this installation is ' + reason + '. Install an updated copy of Toggle or continue as guest.');
-      const step = process.env.TOGGLE_GOOGLE_CLIENT_FILE ? 'Check the file selected by TOGGLE_GOOGLE_CLIENT_FILE.' : 'Run npm run google:setup in the project folder, then try again.';
-      throw new Error('Google configuration is ' + reason + ' in this development copy. ' + step);
+    let client = releaseRegistration;
+    if (!client && !app.isPackaged) {
+      try { client = publisherRegistration(process.env); }
+      catch { throw new Error('Use the Toggle release to sign in with Google, or continue as guest in this development copy.'); }
     }
-    await agentService.google.connect(client.client_id, client.client_secret, signIn.signal);
+    if (!client) throw new Error('This copy is missing its app registration. Install a complete Toggle release.');
+    await agentService.google.connect(client.clientId, client.clientSecret, signIn.signal);
     return agentService.state();
   } finally { signIn = null; }
 }

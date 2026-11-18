@@ -12,7 +12,7 @@ class Google {
   constructor({ read, write, openExternal }) { this.read = read; this.write = write; this.openExternal = openExternal; this.connecting = false; }
   async connect(clientId, clientSecret, signal) {
     if (this.connecting) throw new Error('Google sign-in already in progress');
-    if (!clientId.endsWith('.apps.googleusercontent.com') || !clientSecret) throw new Error('Enter your Google Desktop OAuth client ID and secret.');
+    if (!clientId.endsWith('.apps.googleusercontent.com') || !clientSecret) throw new Error('This release is missing its Google sign-in registration.');
     signal?.throwIfAborted();
     this.connecting = true;
     const state = crypto.randomBytes(32).toString('base64url');
@@ -39,7 +39,7 @@ class Google {
       codePromise.catch(() => {});
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
       const redirect = `http://127.0.0.1:${server.address().port}/callback`;
-      const params = new URLSearchParams({ client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: SCOPES, state, code_challenge: challenge, code_challenge_method: 'S256', access_type: 'offline', prompt: 'consent' });
+      const params = new URLSearchParams({ client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: SCOPES, state, code_challenge: challenge, code_challenge_method: 'S256', access_type: 'offline', prompt: 'select_account consent' });
       signal?.throwIfAborted();
       await this.openExternal('https://accounts.google.com/o/oauth2/v2/auth?' + params);
       const code = await codePromise;

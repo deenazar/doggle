@@ -1,42 +1,15 @@
 {
   "name": "pixelfriend",
   "version": "1.2.0",
-  "description": "Toggle — a personal desktop companion and character studio.",
+  "description": "Toggle \u2014 a personal desktop companion and character studio.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "google:setup": "node scripts/setup-google.js",
-    "dist": "electron-builder",
+    "dist": "electron-builder --config electron-builder.config.js",
     "test": "node --test test/*.test.js"
   },
   "devDependencies": {
     "electron": "33.2.1",
     "electron-builder": "25.1.8"
-  },
-  "build": {
-    "afterPack": "./build/package-google-client.js",
-    "appId": "com.pixelfriend.app",
-    "productName": "Toggle",
-    "files": [
-      "main.js",
-      "preload.js",
-      "renderer/**/*",
-      "agent-preload.js",
-      "agent/**/*",
-      "studio-preload.js",
-      "studio/**/*",
-      "build/icon.png"
-    ],
-    "mac": {
-      "target": "dmg",
-      "icon": "build/icon.icns"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "linux": {
-      "target": "AppImage"
-    },
-    "artifactName": "Toggle-${version}-${arch}.${ext}"
   }
 }
