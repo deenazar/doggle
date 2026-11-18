@@ -9,7 +9,7 @@ function registerStudio({ ipcMain, shell, getWindow, getBuddy, service }) {
     return window.webContents.executeJavaScript(`window.toggleDesktop.${method}(${value === undefined ? '' : JSON.stringify(value)})`);
   };
   const handlers = {
-    state: async () => ({ desktop: await buddy('getSettings'), agent: await service.state() }),
+    state: async () => ({ desktop: await buddy('getSettings'), agent: await service.state(), visible: getBuddy()?.isVisible() ?? false }),
     preferences: config => buddy('updateSettings',validatePreferences(config)),
     action: async (name,args={}) => {
       if (!['save_note','list_notes','preview_downloads','draft_email','read_inbox','read_calendar'].includes(name)) throw new Error('Unsupported studio action');

@@ -10,12 +10,12 @@ function page(name){
  for(const id of ['character','reminders','connections','tools'])$(id+'Page').hidden=id==='character'?!character:id!==name;
  document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===name);if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
  const titles = {
-  character: ['Character studio', 'Desktop companion', 'Preview your character and adjust how it behaves on your desktop.'],
-  reminders: ['Reminders', 'Reminders', 'Set your intervals, daily goal and quiet hours.'],
-  connections: ['Connections', 'Connections', 'Manage your Google account and weather alerts.'],
-  tools: ['Files & notes', 'Files & notes', 'Write a note, sort Downloads or review an email draft.']
+  character: ['Desktop companion', 'Preview animations and make the character yours.'],
+  reminders: ['Reminders', 'Set your intervals, daily goal and quiet hours.'],
+  connections: ['Connections', 'Manage your Google account and weather alerts.'],
+  tools: ['Files & notes', 'Write a note, sort Downloads or review an email draft.']
  };
- const [crumb,title,subtitle]=titles[name];$('breadcrumb').textContent=crumb;$('pageTitle').textContent=title;$('pageSubtitle').textContent=subtitle;
+ const [title,subtitle]=titles[name];$('pageTitle').textContent=title;$('pageSubtitle').textContent=subtitle;
 }
 
 document.querySelectorAll('[data-page]').forEach(button => {
@@ -57,7 +57,14 @@ $('applyCharacter').onclick = () => run($('applyCharacter'), async () => {
   $('saveHint').textContent = 'Desktop settings saved.';
   toast('Desktop settings saved.');
 });
-$('toggleVisibility').onclick=()=>run($('toggleVisibility'),async()=>{visible=await window.studio.visibility(!visible);$('toggleVisibility').setAttribute('aria-label',visible?'Hide desktop companion':'Show desktop companion');toast(visible?'Desktop companion shown':'Desktop companion hidden');});
+function updateVisibility(visibleOnDesktop) {
+  visible = visibleOnDesktop;
+  $('visibilityLabel').textContent = visible ? 'Hide on desktop' : 'Show on desktop';
+}
+
+$('toggleVisibility').onclick = () => run($('toggleVisibility'), async () => {
+  updateVisibility(await window.studio.visibility(!visible));
+});
 $('legacyAppearance').onclick=()=>run(null,()=>window.studio.legacy());
 $('saveReminders').onclick=()=>run($('saveReminders'),async()=>{const c={customText:$('customText').value};for(const k of numeric.filter(k=>!['size','speed'].includes(k)))c[k]=Number($(k).value);for(const k of ['eyesOn','stretchOn','postureOn','customOn','notify'])c[k]=$(k).checked;await window.studio.preferences(c);toast('Your reminder rhythm is saved.');});
 function fillConnection(agent){state.agent=agent;$('googleStatus').textContent=agent.connected?'Connected to Google':'Not connected';$('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
@@ -92,6 +99,7 @@ $('openCharacterEditor').onclick = () => run($('openCharacterEditor'), async () 
   try {
     state = await window.studio.state();
     fillPreferences(state.desktop);
+    updateVisibility(state.visible ?? true);
     fillConnection(state.agent);
   } catch (error) {
     toast('Studio could not load: ' + error.message, true);
