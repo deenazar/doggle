@@ -4,7 +4,7 @@ Toggle opens with a short blue logo animation and a character studio on a white 
 
 ![Toggle Studio](images/toggle-studio.png)
 
-Change the character's name, size, speed, bubble accent and wandering behavior, then choose **Apply to desktop**. Sound and the water progress meter are in **Companion profile**. Expand **Fine-tune your companion** for celebration laps and bubble style. The **Character guide** opens the existing desktop editor where you can replace individual mood images or videos. Removing an upload restores that slot's built-in animation.
+Change the character's name, size, speed, bubble accent and wandering behavior, then choose **Apply to desktop**. Sound and the water progress meter are in **Companion profile**. Expand **Fine-tune your companion** for celebration laps and bubble style. In **Character image**, select the activity, then use **Choose picture or video**. The preview and the desktop use the same saved media. The change applies immediately for that activity. Use **Restore original** for the selected activity to bring back its bundled animation.
 
 The desktop uses the original image and video avatar system. If an earlier preview build used a 3D model, Toggle resumes using the image avatar. Existing image and video overrides are kept.
 
@@ -20,6 +20,8 @@ cd pixelfriend-v5
 npm install --include=dev
 npm start
 ```
+
+For a source checkout, run `npm run google:setup` once and choose the Desktop OAuth JSON to enable sign-in. The private registration stays in the ignored `.local` directory.
 
 To package a Mac installer on macOS, configure the publisher’s Desktop OAuth client as described in the [release maintainer setup](personal-agent.md#release-maintainer-setup), then run:
 

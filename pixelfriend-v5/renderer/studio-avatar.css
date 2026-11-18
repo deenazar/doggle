@@ -82,7 +82,7 @@ main { max-width: 1460px; padding: 35px clamp(18px, 4vw, 56px); }
   background: #faf5ee;
   box-shadow: 0 0 0 5px #ffffff08;
 }
-.profile-portrait img { height: 205px; width: auto; align-self: start; }
+.profile-portrait :is(img, video) { height: 205px; width: auto; align-self: start; }
 .profile-card .field { margin-bottom: 12px; }
 .profile-card label, .profile-card .toggle-row { color: #f0e7e0; }
 .profile-card input#buddyName {
@@ -113,7 +113,7 @@ main { max-width: 1460px; padding: 35px clamp(18px, 4vw, 56px); }
   height: clamp(350px, 34vw, 500px);
   background: radial-gradient(ellipse at 50% 68%, #61554b 0%, #312c29 25%, #121011 66%);
 }
-#originalPreview {
+#originalPreview, #videoPreview {
   position: static; z-index: 1;
   width: auto; max-width: 94%; object-fit: contain;
   height: clamp(43%, calc(94% * var(--avatar-scale, 1)), 100%);
@@ -197,7 +197,7 @@ input:not([type=range],[type=checkbox],[type=color]), select, textarea { font-si
   .studio-grid { grid-template-columns: minmax(0, 1.4fr) minmax(235px, 1fr); }
   .profile-card { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(125px, 1fr) minmax(155px, 1fr) auto; align-items: center; gap: 14px; }
   .profile-portrait { grid-column: 1; grid-row: 1; width: 58px; height: 58px; margin: 0; }
-  .profile-portrait img { height: 112px; margin-top: 3px; }
+  .profile-portrait :is(img, video) { height: 112px; margin-top: 3px; }
   .profile-card .field { margin: 0; }
   .profile-options { grid-column: 1 / -1; display: flex; gap: 20px; padding-top: 0; }
   .profile-options .toggle-row { flex: 1; }
@@ -226,3 +226,8 @@ input:not([type=range],[type=checkbox],[type=color]), select, textarea { font-si
 #welcome .button { display: block; width: 100%; margin: 10px 0; min-height: 44px; }
 #welcome p { font-size: 14px; line-height: 1.5; }
 #welcomeStatus:empty { display: none; }
+
+.picture-edit { padding: 0 16px 18px; text-align: center; }
+.picture-edit p { font-size: 13px; color: #f4e6d7; line-height: 1.6; }
+.picture-edit p:empty { display: none; }
+.picture-edit .button { margin: 3px; }

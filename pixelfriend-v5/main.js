@@ -45,7 +45,12 @@ async function connectGoogle() {
       : process.env.TOGGLE_GOOGLE_CLIENT_FILE || path.join(__dirname, '.local', 'google-client.json');
     let client;
     try { client = await readDesktopClient(file); }
-    catch { throw new Error('Google sign-in is unavailable in this build. You can continue as guest.'); }
+    catch (error) {
+      const reason = error.code === 'ENOENT' ? 'missing' : 'unreadable or invalid';
+      if (app.isPackaged) throw new Error('The Google configuration in this installation is ' + reason + '. Install an updated copy of Toggle or continue as guest.');
+      const step = process.env.TOGGLE_GOOGLE_CLIENT_FILE ? 'Check the file selected by TOGGLE_GOOGLE_CLIENT_FILE.' : 'Run npm run google:setup in the project folder, then try again.';
+      throw new Error('Google configuration is ' + reason + ' in this development copy. ' + step);
+    }
     await agentService.google.connect(client.client_id, client.client_secret, signIn.signal);
     return agentService.state();
   } finally { signIn = null; }
