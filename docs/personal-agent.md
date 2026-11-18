@@ -1,4 +1,6 @@
-# PixelFriend local personal agent (v1.1)
+# Personal agent reference (v1.1)
+
+> In v1.2 the application is named Toggle, and Ollama/chat is on hold. Use [Toggle Studio](toggle-studio.md) for current setup and direct notes/files/email controls. The Google OAuth instructions below still apply; the Ollama/chat instructions describe the earlier version.
 
 This adds a separate Tamil/English chat window to the desktop companion. Open it from the avatar’s right-click menu or the tray menu: **Personal Agent · தமிழ் chat…**. The existing avatar and health reminders remain available.
 

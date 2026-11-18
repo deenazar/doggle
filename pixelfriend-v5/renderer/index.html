@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PixelFriend</title>
+<title>Toggle</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -161,7 +161,7 @@ body.web #webbar{display:flex}
 </div>
 
 <div id="menu">
-  <div data-a="agent">💬 Personal Agent · தமிழ்</div>
+  <div data-a="agent">💬 Toggle Studio</div>
   <div data-a="drink">💧 Thanni kudichitten</div>
   <div data-a="stretch">🙆 Stretch pannitten</div>
   <div data-a="run">🏃 Oru round odu</div>
@@ -564,7 +564,7 @@ function remind(kind = 'water') {
   };
   if (S.come && mouse.x != null && A.mode === 'ground' && Math.abs(mouse.x - A.x) > 160) goTo(clampX(mouse.x + (mouse.x > A.x ? -140 : 140)), true, ask);
   else { stop(); ask(); }
-  if (isApp && S.notify) window.pf.notify('PixelFriend', K.q().replace(/\n/g, ' '));
+  if (isApp && S.notify) window.pf.notify('Toggle', K.q().replace(/\n/g, ' '));
 }
 function snooze(kind) {
   const K = KINDS[kind]; asking = null;
@@ -766,13 +766,16 @@ $('sTest').onclick = () => { saveSettings(); setTimeout(() => remind('water'), 3
 $('wCustom').onclick = openSettings; $('wTest').onclick = () => remind('water'); $('wStats').onclick = openStats;
 addEventListener('resize', () => { A.x = clampX(A.x); });
 
+window.toggleDesktop = {
+  getSettings: () => JSON.parse(JSON.stringify(S)),
+  updateSettings: config => { Object.assign(S, config); save(); applyLook(); return JSON.parse(JSON.stringify(S)); }
+};
 /* ======================= start ======================= */
 loadImgs().catch(() => {}).then(() => {
   applyLook(); face(1); A.x = clampX(innerWidth - 220);
   setMood(quiet() ? 'sleep' : 'idle');
   requestAnimationFrame(loop);
   setTimeout(() => say(S.name ? `Hi ${S.name}! 👋` : 'Hi! Ennai right-click pannunga 👋', [], 3500), 700);
-  if (!S.name && isApp) setTimeout(openSettings, 1800);
 });
 })();
 </script>
