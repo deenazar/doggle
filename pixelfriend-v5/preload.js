@@ -1,7 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('pf', {
-  character: () => ipcRenderer.invoke('pf:character'),
   openAgent: () => ipcRenderer.send('pf:agent'),
   ignoreMouse: (v) => ipcRenderer.send('pf:ignore', v),
   focus: () => ipcRenderer.send('pf:focus'),

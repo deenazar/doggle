@@ -1,6 +1,6 @@
 # Toggle
 
-A personal desktop companion with a blue animated welcome, a customization studio and real 3D characters. Built with Electron, JavaScript, HTML/CSS and Three.js.
+A personal desktop companion with a blue animated welcome, a customization studio and the original animated character. Built with Electron, JavaScript, HTML/CSS.
 
 ![Toggle Studio](docs/images/toggle-studio.png)
 
@@ -10,9 +10,9 @@ npm install --include=dev
 npm start
 ```
 
-Open **Toggle Studio** from the tray or the companion's right-click menu. Customize the built-in Orbit robot, import a self-contained `.glb`, configure reminders, and use local notes / approved file and email actions. Ollama is on hold; these studio controls do not need local AI.
+Open **Toggle Studio** from the tray or the companion's right-click menu. Preview the original character, customize its appearance, configure reminders and use notes, file organization and approved email sending. Ollama is on hold; these studio controls do not need local AI.
 
-- [Studio setup, 3D workflow and validation](docs/toggle-studio.md)
+- [Studio setup and character customization](docs/toggle-studio.md)
 - [Google OAuth configuration and v1.1 agent reference](docs/personal-agent.md)
 - [Initial source review](docs/pixelfriend-v5-analysis.md)
 - [Historical original-import checksums](docs/pixelfriend-v5-sha256.json)

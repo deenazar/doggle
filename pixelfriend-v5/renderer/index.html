@@ -153,7 +153,7 @@ body.web #webbar{display:flex}
     <div id="meter"><div id="drops"></div><span id="count"></span></div>
   </div>
   <div id="charWrap">
-    <div id="flip"><canvas id="model3d" class="body" style="display:none"></canvas><img id="char" class="body" alt=""><canvas id="vcan" class="body"></canvas><canvas id="drip" class="body" width="16" height="20"></canvas></div>
+    <div id="flip"><img id="char" class="body" alt=""><canvas id="vcan" class="body"></canvas><canvas id="drip" class="body" width="16" height="20"></canvas></div>
     <video id="vid" muted loop playsinline style="display:none"></video>
     <div id="zzz">z Z</div>
     <div id="shadow"></div>
@@ -246,7 +246,6 @@ body.web #webbar{display:flex}
 </div>
 <input type="file" id="file" accept="image/png,image/gif,image/webp,image/jpeg,video/mp4,video/webm,video/quicktime" hidden>
 
-<script src="model-view.bundle.js"></script>
 <script>
 (() => {
 const isApp = !!window.pf;
@@ -352,39 +351,12 @@ function drawDrip() {
 
 /* ======================= actor rendering ======================= */
 const actor = $('actor'), img = $('char'), flip = $('flip');
-const modelCanvas = $('model3d');
-let modelView = null, modelActive = false, characterEpoch = 0;
-async function loadCharacter() {
-  const epoch = ++characterEpoch;
-  if (!window.pf?.character) return;
-  try {
-    const c = await window.pf.character();
-    if (epoch !== characterEpoch) return;
-    if (c.kind === 'original') { modelActive = false; modelCanvas.style.display = 'none'; modelView?.dispose(); modelView = null; setMood(mood); return; }
-    modelCanvas.style.display = 'block';
-    modelCanvas.style.height = S.size + 'px'; modelCanvas.style.width = Math.round(S.size * .9) + 'px';
-    modelView ||= new window.ToggleModelView(modelCanvas);
-    await modelView.load(c.kind === 'custom' ? c.bytes : null);
-    if (epoch !== characterEpoch) return;
-    modelView.setRotation(c.rotation || 0); modelActive = true; setMood(mood);
-  } catch (e) {
-    if (epoch !== characterEpoch) return;
-    modelActive = false; modelCanvas.style.display = 'none'; modelView?.dispose(); modelView = null; setMood(mood);
-    say('3D character could not load. Original companion restored.', [], 6000);
-  }
-}
 let mood = 'idle', moodTimer;
 function setMood(m, ms) {
   mood = m; clearTimeout(moodTimer);
   actor.classList.forEach(c => c.startsWith('m-') && actor.classList.remove(c));
   void actor.offsetWidth; // restart CSS animation
   actor.classList.add('m-' + m);
-  if (modelActive) {
-    img.style.display = 'none'; dc.style.display = 'none'; vc.style.display = 'none'; vid.pause(); modelCanvas.style.display = 'block';
-    modelView.setMood(m); A.lockUntil = ms ? Date.now() + ms : 0;
-    if (ms) moodTimer = setTimeout(() => { if (mood === m) setMood(restMood()); }, ms);
-    return;
-  }
   const src = imgFor(m);
   actor.classList.toggle('real', !!IMG[m]);
   if (src && !src.video && src.bundled && m === 'happy') img.removeAttribute('src'); // replay from start
@@ -409,7 +381,6 @@ function applyLook() {
   const d = $('drops'); d.innerHTML = '';
   for (let i = 0; i < S.goal; i++) { const e = document.createElement('i'); if (i < S.glasses) e.className = 'on'; d.appendChild(e); }
   $('count').innerHTML = `<b>${S.glasses}</b>/${S.goal}`;
-  if (modelActive) { modelCanvas.style.height = S.size + 'px'; modelCanvas.style.width = Math.round(S.size * .9) + 'px'; modelView.resize(); }
   setMood(mood);
 }
 
@@ -459,7 +430,7 @@ function drawVideo(t) {
 
 /* ======================= physics + movement ======================= */
 const A = { x: innerWidth - 220, y: 0, vx: 0, vy: 0, dir: 1, target: null, run: false, onArrive: null, mode: 'ground', hiddenUntil: 0 };
-const halfW = () => modelActive ? Math.max(40, modelCanvas.offsetWidth / 2) : Math.max(40, (vc.style.display === 'block' ? vc.offsetWidth : img.style.display === 'none' ? dc.offsetWidth : img.offsetWidth) / 2);
+const halfW = () => Math.max(40, (vc.style.display === 'block' ? vc.offsetWidth : img.style.display === 'none' ? dc.offsetWidth : img.offsetWidth) / 2);
 const clampX = x => Math.max(halfW() + 4, Math.min(innerWidth - halfW() - 4, x));
 function face(d) { if (d) { A.dir = d; flip.style.transform = `scaleX(${d})`; } }
 // image is assumed to face the viewer / right; scaleX(-1) when walking left looks natural for most avatars
@@ -712,7 +683,6 @@ if (isApp) {
     const want = !(down || hit(document.elementFromPoint(e.clientX, e.clientY)));
     if (want !== ignoring) { ignoring = want; window.pf.ignoreMouse(want); }
   });
-  window.pf.on('character-changed', loadCharacter);
   window.pf.on('agent-alert', ({ title, body }) => {
     if (asking || busy() || A.hiddenUntil) return;
     stop(); setMood('ask', 8000); say(`${title}\n${String(body).slice(0, 240)}`, [], 8000);
@@ -806,7 +776,6 @@ loadImgs().catch(() => {}).then(() => {
   setMood(quiet() ? 'sleep' : 'idle');
   requestAnimationFrame(loop);
   setTimeout(() => say(S.name ? `Hi ${S.name}! 👋` : 'Hi! Ennai right-click pannunga 👋', [], 3500), 700);
-  loadCharacter();
 });
 })();
 </script>

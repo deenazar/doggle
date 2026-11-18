@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"><title>Toggle Studio</title><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="studio-motion.css"><script src="model-view.bundle.js" defer></script><script src="studio.js" defer></script></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><title>Toggle Studio</title><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="studio-avatar.css"><script src="studio.js" defer></script></head><body>
 <svg class="icon-defs" aria-hidden="true"><defs>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
 <symbol id="i-face" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="5"/><path d="M12 2v4M8 11v2m8-2v2m-7 3c2 2 4 2 6 0"/></symbol>
@@ -12,76 +12,54 @@
 <div class="app-shell">
 <aside class="sidebar"><a class="brand" href="#" aria-label="Toggle home"><span class="brand-mark"><i></i></span>toggle<span class="brand-dot">.</span></a>
 <nav aria-label="Main navigation">
-<button class="nav-item active" data-page="home"><svg><use href="#i-grid"/></svg>Overview</button>
-<button class="nav-item" data-page="character"><svg><use href="#i-face"/></svg>Character studio</button>
+<button class="nav-item active" data-page="character" aria-current="page"><svg><use href="#i-face"/></svg>Character studio</button>
 <button class="nav-item" data-page="reminders"><svg><use href="#i-bell"/></svg>Reminders</button>
 <button class="nav-item" data-page="connections"><svg><use href="#i-link"/></svg>Connections</button>
 <button class="nav-item" data-page="tools"><svg><use href="#i-folder"/></svg>Files & notes</button>
-</nav><div class="sidebar-bottom"><button id="openGuide" class="guide-link">3D character guide <span aria-hidden="true">→</span></button><div class="sidebar-footer"><span>Toggle Studio</span><span>v1.2</span></div></div></aside>
-<div class="workspace-main"><header class="topbar"><div><span class="breadcrumb">Workspace</span><span class="slash">/</span><span id="breadcrumb">Overview</span></div><div class="topbar-right"><span class="local-badge"><i></i> On your device</span><button id="toggleVisibility" class="icon-button" title="Show or hide desktop companion" aria-label="Hide desktop companion">◉</button></div></header>
-<main><div class="page-heading"><div><h1 id="pageTitle">Character workshop</h1><p id="pageSubtitle">Preview movement and customize your desktop companion.</p></div><button id="guideTop" class="button secondary">Getting started <span aria-hidden="true">→</span></button></div>
+</nav><div class="sidebar-bottom"><button id="openGuide" class="guide-link">Character guide <span aria-hidden="true">→</span></button><div class="sidebar-footer"><span>Toggle Studio</span><span>v1.2</span></div></div></aside>
+<div class="workspace-main"><header class="topbar"><div><span class="breadcrumb">Workspace</span><span class="slash">/</span><span id="breadcrumb">Character studio</span></div><div class="topbar-right"><span class="local-badge"><i></i> On your device</span><button id="toggleVisibility" class="icon-button" title="Show or hide desktop companion" aria-label="Hide desktop companion">◉</button></div></header>
+<main><div class="page-heading"><div><h1 id="pageTitle">Desktop companion</h1><p id="pageSubtitle">Preview your character and adjust how it behaves on your desktop.</p></div><button id="guideTop" class="button secondary">Character guide <span aria-hidden="true">→</span></button></div>
 <section id="characterPage" class="page-panel">
 <div class="studio-grid">
-<section class="preview-card" aria-label="Character and animation preview">
+<section class="preview-card" aria-label="Character preview">
   <div class="card-topline">
-    <span class="overline">CHARACTER VIEWPORT</span>
-    <span class="preview-label"><i></i><span id="previewStatus">3D preview</span></span>
+    <h2>Character preview</h2>
+    <span class="preview-label">Original character</span>
   </div>
   <div id="stage" class="stage">
-    <svg class="stage-diagram" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <defs><pattern id="ruler" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M.5 0v7"/></pattern></defs>
-      <path class="frame-line" d="M42 85V53h32m452 0h32v32M42 316v32h32m452 0h32v-32"/>
-      <path class="axis-line" d="M300 62v278M84 286h432"/>
-      <ellipse class="orbit-line" cx="300" cy="300" rx="180" ry="35"/>
-      <ellipse class="orbit-line inner-orbit" cx="300" cy="300" rx="132" ry="23"/>
-      <path class="axis-line" d="M74 319h34m-34 0v-33m0 33-14 13"/>
-      <text x="111" y="322">X</text><text x="70" y="280">Y</text><text x="50" y="341">Z</text>
-      <rect x="120" y="354" width="360" height="12" fill="url(#ruler)" stroke="none"/>
-    </svg>
-    <div class="floor-shadow"></div>
-    <canvas id="modelCanvas" aria-label="Interactive 3D character preview"></canvas>
-    <img id="originalPreview" src="avatars/idle.webp" alt="Original desktop companion" hidden>
-    <div id="previewError" hidden></div>
+    <img id="originalPreview" src="avatars/idle.webp" alt="Original character in its idle animation">
   </div>
-  <div class="preview-toolbar">
-    <div><strong id="previewName">Orbit</strong><span id="previewDescription">Built-in 3D character</span></div>
-    <label class="animation-control"><span>Animation</span><select id="animation"><option>Idle</option></select></label>
-    <button id="resetView" class="icon-button" title="Reset character view" aria-label="Reset character view">↺</button>
+  <div class="mood-controls" role="group" aria-label="Preview an original character animation">
+    <button type="button" data-mood="idle" aria-pressed="true">Idle</button>
+    <button type="button" data-mood="walk" aria-pressed="false">Walk</button>
+    <button type="button" data-mood="happy" aria-pressed="false">Happy</button>
+    <button type="button" data-mood="sleep" aria-pressed="false">Sleep</button>
+    <button type="button" data-mood="ask" aria-pressed="false">Ask</button>
+    <button type="button" data-mood="held" aria-pressed="false">Held</button>
   </div>
-  <div id="motionInspector" class="motion-inspector" hidden>
-    <div class="motion-heading">
-      <button id="motionPlayback" class="icon-button" aria-label="Pause animation" title="Pause animation">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path id="motionGlyph" d="M9 5v14m6-14v14"/></svg>
-      </button>
-      <label for="motionSeek">Motion timeline</label>
-      <span id="motionTime" aria-hidden="true">0.00 s</span>
-    </div>
-    <div class="motion-track">
-      <svg viewBox="0 0 420 32" preserveAspectRatio="none" aria-hidden="true">
-        <path class="track-grid" d="M1 0v32m104-32v32m105-32v32m105-32v32m104-32v32"/>
-        <path class="track-path" d="M0 27H420"/>
-        <path class="track-fill" id="motionTrace" d="M0 27H420" pathLength="1"/>
-        <path class="track-frames" id="motionFrames"/>
-      </svg>
-      <input id="motionSeek" type="range" min="0" max="1000" step="1" value="0">
-    </div>
-    <div class="time-scale" aria-hidden="true"><span>0 s</span><span id="motionDuration"></span></div>
-  </div>
-  <div class="preview-footnote"><span>Drag to orbit · Scroll to zoom</span><span id="activeCharacter">Preview only</span></div>
 </section>
-<section class="customize-card"><div class="card-title"><h2>Companion settings</h2></div><div class="field"><label for="buddyName">Your name</label><input id="buddyName" maxlength="80" placeholder="What should your buddy call you?"></div><div class="field"><label>Choose your companion</label><div class="character-options"><button id="chooseStarter" class="character-option selected"><span class="mini-robot">◕‿◕</span><strong>Orbit</strong><small>3D companion</small></button><button id="chooseOriginal" class="character-option"><img src="avatars/idle.webp" alt=""><strong>Original</strong><small>Animated avatar</small></button><button id="uploadModel" class="character-option upload-option"><svg><use href="#i-upload"/></svg><strong>Upload</strong><small>Your .glb model</small></button></div></div>
-<div class="field"><div class="label-row"><label for="size">Character size</label><output id="sizeOutput">220 px</output></div><input id="size" type="range" min="100" max="360" value="220"></div>
+<section class="customize-card"><div class="card-title"><h2>Companion settings</h2></div><div class="field"><label for="buddyName">Your name</label><input id="buddyName" maxlength="80" placeholder="What should your buddy call you?"></div><div class="field"><div class="label-row"><label for="size">Character size</label><output id="sizeOutput">220 px</output></div><input id="size" type="range" min="100" max="360" value="220"></div>
 <div class="field"><div class="label-row"><label for="speed">Movement speed</label><output id="speedOutput">1×</output></div><input id="speed" type="range" min="0.2" max="3" step="0.1" value="1"></div>
 <div class="field compact-field"><label for="accent">Bubble accent</label><div class="swatches"><button data-color="#2563eb" class="swatch blue" aria-label="Blue accent"></button><button data-color="#8b5cf6" class="swatch violet" aria-label="Violet accent"></button><button data-color="#14b8a6" class="swatch mint" aria-label="Mint accent"></button><button data-color="#f59e0b" class="swatch amber" aria-label="Amber accent"></button><input id="accent" type="color" value="#2563eb" aria-label="Custom accent color"></div></div>
 <label class="toggle-row"><span>Wander on desktop</span><input id="roam" type="checkbox" class="switch" checked></label>
 <button id="applyCharacter" class="button primary wide">Apply to desktop <svg><use href="#i-arrow"/></svg></button><p class="save-hint" id="saveHint"></p></section></div>
-<div class="below-grid"><button id="buildOwn" class="feature-card"><span class="feature-icon lavender">✧</span><div><h3>Import a 3D character</h3><p>Model, animate and export a GLB.</p></div><span class="card-arrow" aria-hidden="true">→</span></button><button id="goReminders" class="feature-card"><span class="feature-icon peach"><svg><use href="#i-bell"/></svg></span><div><h3>Set reminders</h3><p>Water, eye breaks and stretch breaks.</p></div><span class="card-arrow">→</span></button></div>
-<details class="advanced-card"><summary>Fine-tune your companion <span>Orientation, bubble style & behaviour</span></summary><div class="form-grid"><label>Model facing direction <input id="rotation" type="range" min="-180" max="180" step="5" value="0"><output id="rotationOutput">0°</output></label><label>Speech bubble <select id="bubbleStyle"><option value="float">Floating</option><option value="comic">Comic</option><option value="card">Dark card</option></select></label><label class="toggle-row">Celebration laps<input id="lap" class="switch" type="checkbox"></label><label class="toggle-row">Come closer for reminders<input id="come" class="switch" type="checkbox"></label><label class="toggle-row">Sound effects<input id="sound" class="switch" type="checkbox"></label><label class="toggle-row">Water progress meter<input id="meter" class="switch" type="checkbox"></label></div><button id="legacyAppearance" class="button secondary">Custom mood images & messages ↗</button><p class="muted">Image/video mood uploads apply to the Original companion. For 3D, use animations embedded in the GLB.</p></details>
+<details class="advanced-card"><summary>Fine-tune your companion <span>Bubble style & behaviour</span></summary><div class="form-grid"><label>Speech bubble <select id="bubbleStyle"><option value="float">Floating</option><option value="comic">Comic</option><option value="card">Dark card</option></select></label><label class="toggle-row">Celebration laps<input id="lap" class="switch" type="checkbox"></label><label class="toggle-row">Come closer for reminders<input id="come" class="switch" type="checkbox"></label><label class="toggle-row">Sound effects<input id="sound" class="switch" type="checkbox"></label><label class="toggle-row">Water progress meter<input id="meter" class="switch" type="checkbox"></label></div><button id="legacyAppearance" class="button secondary">Custom mood images & messages ↗</button><p class="muted">Use the desktop editor to replace individual mood images or videos and edit reminder messages.</p></details>
 </section>
 <section id="remindersPage" class="page-panel" hidden><div class="section-card"><div class="card-title"><h2>Reminder schedule</h2></div><div class="reminder-grid"><label>Water reminder · minutes<input id="interval" type="number" min="1" max="240"></label><label>Daily water goal · glasses<input id="goal" type="number" min="1" max="30"></label><label>Quiet hours start · hour<input id="qs" type="number" min="0" max="23"></label><label>Quiet hours end · hour<input id="qe" type="number" min="0" max="23"></label><label class="toggle-row">Eye breaks<input id="eyesOn" class="switch" type="checkbox"></label><label>Eye break interval · minutes<input id="eyesMin" type="number" min="1" max="240"></label><label class="toggle-row">Stretch reminders<input id="stretchOn" class="switch" type="checkbox"></label><label>Stretch interval · minutes<input id="stretchMin" type="number" min="1" max="240"></label><label class="toggle-row">Posture reminders<input id="postureOn" class="switch" type="checkbox"></label><label>Posture interval · minutes<input id="postureMin" type="number" min="1" max="240"></label><label class="toggle-row">Custom reminder<input id="customOn" class="switch" type="checkbox"></label><label>Custom interval · minutes<input id="customMin" type="number" min="1" max="1440"></label></div><label>Your custom reminder<input id="customText" maxlength="500" placeholder="A little reminder for yourself"></label><div class="form-grid"><label>Snooze · minutes<input id="snooze" type="number" min="1" max="120"></label><label class="toggle-row">Desktop notifications<input id="notify" class="switch" type="checkbox"></label></div><button id="saveReminders" class="button primary">Save reminders</button></div></section>
 <section id="connectionsPage" class="page-panel" hidden><div class="connections-grid"><div class="section-card"><div class="connection-icon">G</div><h2>Google account</h2><p>Connect Gmail and Google Calendar.</p><span id="googleStatus" class="soft-badge">Not connected</span><details class="oauth-details"><summary>Google setup · personal testing</summary><p>Create a Google Cloud <strong>Desktop OAuth client</strong>, enable Gmail and Calendar APIs, and add yourself as a test user. These fields identify the app; the browser sign-in chooses your account.</p><label>Client ID<input id="clientId" autocomplete="off" placeholder="…apps.googleusercontent.com"></label><label>Client secret<input id="clientSecret" type="password" autocomplete="off"></label><p class="muted">Public one-click onboarding needs a configured, verified Google OAuth app. No shared credentials are bundled.</p></details><button id="connectGoogle" class="button primary">Connect Google ↗</button><button id="disconnectGoogle" class="button text">Disconnect</button><label class="toggle-row"><span>Mail & calendar notifications<small>Checks while Toggle is running.</small></span><input id="googleNotifications" class="switch" type="checkbox"></label></div><div class="section-card"><div class="connection-icon sunny">☀</div><h2>Weather alerts</h2><p>Choose a city and temperature threshold.</p><label>City<div class="input-action"><input id="weatherCity" placeholder="Chennai"><button id="searchCity" class="button secondary">Find</button></div></label><label>Location<select id="weatherPlace"><option value="">Choose a city</option></select></label><label>Alert above · °C<input id="heatThreshold" type="number" min="20" max="50" value="32"></label><label class="toggle-row">Heat alerts<input id="weatherAlerts" class="switch" type="checkbox"></label><p class="muted">Weather by Open-Meteo. Your selected city and coordinates are sent to the service.</p></div></div><button id="saveConnections" class="button primary">Save connections</button><div class="paused-card"><span>Ⅱ</span><div><strong>Local AI is on hold</strong><p>No model installation needed. Customize, connect Google and use the tools below without Ollama.</p></div></div></section>
 <section id="toolsPage" class="page-panel" hidden><div class="tool-tabs"><button data-tool="notes" class="button secondary">Notes</button><button data-tool="files" class="button secondary">Downloads</button><button data-tool="email" class="button secondary">Email</button><button id="readCalendar" class="button secondary">Upcoming events</button><button id="readInbox" class="button secondary">Unread mail</button></div><div id="notesTool" class="section-card tool-panel"><h2>Local notes</h2><p>Notes are saved on your Mac.</p><label>Title<input id="noteTitle" maxlength="200" placeholder="An idea worth keeping"></label><label>Note<textarea id="noteBody" rows="5" maxlength="30000" placeholder="Write in தமிழ், English, or a little of both…"></textarea></label><button id="saveNote" class="button primary">Save note</button><button id="listNotes" class="button secondary">Recent notes</button><button id="openNotes" class="button text">Open folder ↗</button></div><div id="filesTool" class="section-card tool-panel" hidden><h2>Organize Downloads</h2><p>Sort Downloads into image, document, video and other folders. Review the exact moves before approving. Existing files are never overwritten.</p><button id="previewDownloads" class="button primary">Preview Downloads organization</button></div><div id="emailTool" class="section-card tool-panel" hidden><h2>Compose an email</h2><p>Prepare your email here. Nothing is sent until you approve the final draft.</p><label>Recipient<input id="emailTo" type="email" placeholder="name@example.com"></label><label>Subject<input id="emailSubject" maxlength="180"></label><label>Message<textarea id="emailBody" rows="6" maxlength="30000"></textarea></label><button id="prepareEmail" class="button primary">Review draft →</button></div><div id="toolResults" aria-live="polite"></div><div id="approvals"></div></section>
 
 </main></div></div><div id="toast" role="status" aria-live="polite" hidden></div>
-<dialog id="guide"><div class="dialog-top"><span class="eyebrow">GLB IMPORT</span><button id="closeGuide" class="icon-button" aria-label="Close character guide">×</button></div><h2>Create a 3D character</h2><p>Start with Orbit, or bring a character from your imagination into Toggle.</p><div class="guide-starter"><span class="mini-robot">◕‿◕</span><div><strong>Orbit is ready to come home.</strong><p>A real 3D character with Idle, Walk and Happy animations. Built in, no account needed.</p></div><button id="exportStarter" class="button secondary">Download .glb ↓</button></div><ol class="guide-steps"><li><strong>Create your character</strong><p>Model in Blender, or generate with a 3D service such as Meshy or Tripo. Image generation alone produces a picture, not a working 3D model. Download a mesh you have permission to use.</p><div class="prompt-example">Example prompt: “A friendly small blue-and-white desktop robot, rounded shapes, two arms and two feet, front facing, clean low-poly topology, separate limbs, neutral pose.”</div></li><li><strong>Add movement, if you want</strong><p>Rig the character in Blender or your preferred rigging tool. Create clips named <code>Idle</code>, <code>Walk</code>, <code>Happy</code>, <code>Ask</code>, <code>Sleep</code> and <code>Held</code>. Static models also work; Toggle moves them around the desktop without inventing limb animations.</p></li><li><strong>Export a self-contained GLB</strong><p>In Blender: File → Export → glTF 2.0 → Format: <strong>glTF Binary (.glb)</strong>. Include materials, embedded textures and animations. Disable Draco / Meshopt compression. Apply transforms; face forward (+Z), feet on the floor. Prefer under 50,000 triangles and 2K textures; file limit is 30 MB.</p></li><li><strong>Preview, personalize, apply</strong><p>Choose Upload in Character Studio. Inspect the model and available animation clips, adjust facing direction and character size, then choose <strong>Apply to desktop</strong>. Toggle keeps a local copy, so the source file can move later.</p></li></ol><div class="guide-note">No hosted 3D generation is connected. This guide and the built-in model work without an AI subscription. FBX, OBJ, ZIP and models with external texture files must first be converted to an embedded GLB.</div><button id="guideUpload" class="button primary">Choose a GLB model <svg><use href="#i-upload"/></svg></button></dialog>
+<dialog id="guide">
+  <div class="dialog-top">
+    <h2>Customize character images</h2>
+    <button id="closeGuide" class="icon-button" aria-label="Close character guide">×</button>
+  </div>
+  <ol class="guide-steps">
+    <li>Open the desktop character editor below.</li>
+    <li>Choose a mood slot, such as Idle or Walk, and select an image or video. Transparent images blend into the desktop.</li>
+    <li>Repeat for other moods. Remove an upload from its slot to restore the built-in animation.</li>
+  </ol>
+  <button id="openCharacterEditor" class="button primary">Open character editor</button>
+</dialog>
 </body></html>
