@@ -70,7 +70,15 @@ $('toggleVisibility').onclick = () => run($('toggleVisibility'), async () => {
 $('legacyAppearance').onclick=()=>run(null,()=>window.studio.legacy());
 $('saveReminders').onclick=()=>run($('saveReminders'),async()=>{const c={customText:$('customText').value};for(const k of numeric.filter(k=>!['size','speed'].includes(k)))c[k]=Number($(k).value);for(const k of ['eyesOn','stretchOn','postureOn','customOn','notify'])c[k]=$(k).checked;await window.studio.preferences(c);toast('Your reminder rhythm is saved.');});
 function fillConnection(agent){state.agent=agent;$('googleStatus').textContent=agent.connected?'Connected to Google':'Not connected';$('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
-$('connectGoogle').onclick=()=>run($('connectGoogle'),async()=>{if(!$('clientId').value.trim()||!$('clientSecret').value.trim()){document.querySelector('.oauth-details').open=true;$('clientId').focus();throw new Error('Enter your Google Desktop OAuth client details in Google setup first.');}toast('Finish Google sign-in in your browser.');try{fillConnection(await window.studio.connect($('clientId').value.trim(),$('clientSecret').value.trim()));toast('Google connected.');}finally{$('clientSecret').value='';}});
+$('connectGoogle').onclick = () => run($('connectGoogle'), async () => {
+ const id = $('clientId').value.trim();
+ const secret = $('clientSecret').value.trim();
+ if (Boolean(id) !== Boolean(secret)) throw new Error('Enter both manual fields or clear them to use a JSON file.');
+ try {
+   const agent = await window.studio.connect(id, secret);
+   if (agent) { fillConnection(agent); toast('Google connected.'); }
+ } finally { $('clientSecret').value = ''; }
+});
 $('disconnectGoogle').onclick=()=>run($('disconnectGoogle'),async()=>{fillConnection(await window.studio.disconnect());await refreshApprovals();toast('Google disconnected locally.');});
 $('searchCity').onclick=()=>run($('searchCity'),async()=>{const places=await window.studio.places($('weatherCity').value.trim());$('weatherPlace').replaceChildren(...places.map(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;return o;}));toast(places.length?'Choose your location, then save connections.':'No places found. Try the English city name.');});
 $('saveConnections').onclick=()=>run($('saveConnections'),async()=>{const next=await window.studio.configure({model:state.agent.config.model,notifications:$('googleNotifications').checked,weatherAlerts:$('weatherAlerts').checked,heatThreshold:Number($('heatThreshold').value),placeId:$('weatherPlace').value});fillConnection(next);toast('Connections and alerts saved.');});

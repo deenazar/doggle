@@ -1,6 +1,6 @@
 // PixelFriend — main process
 // One transparent, click-through window covers the whole screen so the avatar can roam anywhere.
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, Notification, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, dialog, Notification, safeStorage, shell } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs/promises');
@@ -125,7 +125,7 @@ app.whenReady().then(async () => {
     } });
   await agentService.init();
   registerAgent();
-  registerStudio({ ipcMain, shell, getWindow: () => studioWindow, getBuddy: () => win, service: agentService });
+  registerStudio({ ipcMain, shell, dialog, localClientFile: app.isPackaged ? null : path.join(__dirname, '.local', 'google-client.json'), getWindow: () => studioWindow, getBuddy: () => win, service: agentService });
   if (process.platform === 'darwin' && app.dock) app.dock.hide();
   await createWindow();
   buildTray();
