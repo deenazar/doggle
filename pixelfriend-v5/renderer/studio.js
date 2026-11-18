@@ -9,14 +9,90 @@ function page(name){
  const character=['home','character'].includes(name);
  for(const id of ['character','reminders','connections','tools'])$(id+'Page').hidden=id==='character'?!character:id!==name;
  document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===name);if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
- const titles={home:['Overview','A little friend. Entirely yours.','Bring a little personality to your desktop. Make every detail feel like you.'],character:['Character studio','A character that feels like you.','Start with Orbit, bring your own 3D character, or keep a familiar face.'],reminders:['Reminders','Small reminders. A better rhythm.','Make time for water, a stretch, and a moment away from the screen.'],connections:['Connections','Your world, a little closer.','Connect what matters. Keep control of what your companion can see.'],tools:['Files & notes','Less busywork. More breathing room.','Keep a thought, clear the clutter, or prepare a message. No local AI needed.']};
+ const titles = {
+  home: ['Overview', 'Character workshop', 'Preview movement and customize your desktop companion.'],
+  character: ['Character studio', 'Character studio', 'Choose Orbit, the original avatar, or your own GLB.'],
+  reminders: ['Reminders', 'Reminders', 'Set your intervals, daily goal and quiet hours.'],
+  connections: ['Connections', 'Connections', 'Manage your Google account and weather alerts.'],
+  tools: ['Files & notes', 'Files & notes', 'Write a note, sort Downloads or review an email draft.']
+ };
  const [crumb,title,subtitle]=titles[name];$('breadcrumb').textContent=crumb;$('pageTitle').textContent=title;$('pageSubtitle').textContent=subtitle;
  requestAnimationFrame(()=>viewer?.resize());
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));document.querySelector('.brand').onclick=e=>{e.preventDefault();page('home');};
-function ensureViewer(){if(!viewer)viewer=new window.ToggleModelView($('modelCanvas'),{interactive:true});return viewer;}
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+function drawPlayhead(action) {
+  if (!action || $('motionInspector').hidden) return;
+  const duration = action.getClip().duration;
+  const progress = Math.min(1, action.time / duration);
+  const seconds = action.time.toFixed(2);
+  const seek = $('motionSeek');
+  seek.value = Math.round(progress * 1000);
+  seek.setAttribute('aria-valuetext', seconds + ' seconds');
+  $('motionTrace').style.strokeDasharray = progress + ' 1';
+  $('motionTime').textContent = seconds + ' s';
+}
+
+function updatePlayback(paused) {
+  const label = paused ? 'Play animation' : 'Pause animation';
+  $('motionPlayback').setAttribute('aria-label', label);
+  $('motionPlayback').title = label;
+  $('motionGlyph').setAttribute('d', paused ? 'M9 5l10 7-10 7z' : 'M9 5v14m6-14v14');
+}
+
+function refreshTimeline() {
+  const action = viewer?.action;
+  const clip = action?.getClip();
+  const hasTimeline = !$('modelCanvas').hidden && clip?.duration > 0;
+  $('motionInspector').hidden = !hasTimeline;
+  $('previewStatus').textContent = $('modelCanvas').hidden ? 'Animated avatar' : '3D preview';
+  if (!hasTimeline) return;
+  const keyframes = new Set();
+  for (const track of clip.tracks) {
+    for (const time of track.times) {
+      const position = Math.min(419, Math.max(1, Math.round(time / clip.duration * 420)));
+      keyframes.add(position);
+    }
+  }
+  $('motionFrames').setAttribute('d', [...keyframes].map(x => 'M' + x + ' 20v7').join(''));
+  $('motionDuration').textContent = clip.duration.toFixed(2) + ' s';
+  action.paused = reducedMotion.matches;
+  updatePlayback(action.paused);
+  drawPlayhead(action);
+}
+
+function ensureViewer() {
+  if (!viewer) {
+    viewer = new window.ToggleModelView($('modelCanvas'), { interactive: true });
+    viewer.onFrame = drawPlayhead;
+  }
+  return viewer;
+}
+
+$('motionSeek').addEventListener('input', event => {
+  const action = viewer?.action;
+  if (!action) return;
+  viewer.seek(Number(event.target.value) / 1000 * action.getClip().duration);
+  updatePlayback(true);
+  drawPlayhead(action);
+});
+
+$('motionPlayback').addEventListener('click', () => {
+  const action = viewer?.action;
+  if (!action) return;
+  action.paused = !action.paused;
+  updatePlayback(action.paused);
+});
+
+reducedMotion.addEventListener('change', event => {
+  if (event.matches && viewer?.action) {
+    viewer.action.paused = true;
+    updatePlayback(true);
+  }
+});
 async function preview(kind,data){
- const serial=++loadSerial;previewReady=false;$('applyCharacter').disabled=true;$('previewError').hidden=true;
+ const serial=++loadSerial;previewReady=false;$('motionInspector').hidden=true;$('applyCharacter').disabled=true;$('previewError').hidden=true;
  try{
   if(kind==='original'){$('modelCanvas').hidden=true;$('originalPreview').hidden=false;$('animation').replaceChildren();$('animation').disabled=true;}
   else{
@@ -25,8 +101,12 @@ async function preview(kind,data){
    v.setRotation(Number($('rotation').value));
   }
   if(serial!==loadSerial)return;previewKind=kind;previewReady=true;
+  if (viewer?.action && kind !== 'original') {
+    $('animation').value = viewer.action.getClip().name;
+  }
+  refreshTimeline();
   $('previewName').textContent=kind==='starter'?'Orbit':kind==='original'?'Original companion':data.name;
-  $('previewDescription').textContent=kind==='custom'?'Your own 3D character':kind==='original'?'A familiar face for your desktop':'Your friendly 3D sidekick';
+  $('previewDescription').textContent=kind==='custom'?'Your own 3D character':kind==='original'?'Original animated avatar':'Built-in 3D character';
   $('chooseStarter').classList.toggle('selected',kind==='starter');$('chooseOriginal').classList.toggle('selected',kind==='original');$('uploadModel').classList.toggle('selected',kind==='custom');
  }catch(e){if(serial===loadSerial){$('previewError').hidden=false;$('previewError').textContent='Could not preview this model. '+e.message;toast('The current desktop character has not changed.',true);}}
  finally{if(serial===loadSerial)$('applyCharacter').disabled=!previewReady;}
@@ -38,7 +118,10 @@ $('size').oninput=()=>{updateLabels();if(viewer){viewer.camera.position.set(0,1.
 document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>{$('accent').value=b.dataset.color;});
 $('chooseStarter').onclick=()=>preview('starter');$('chooseOriginal').onclick=()=>preview('original');
 async function upload(){await run($('uploadModel'),async()=>{const data=await window.studio.upload();if(data)await preview('custom',data);});}
-$('uploadModel').onclick=upload;$('animation').onchange=()=>viewer?.play($('animation').value);
+$('uploadModel').onclick=upload;$('animation').onchange = () => {
+  viewer?.play($('animation').value);
+  refreshTimeline();
+};
 $('resetView').onclick=()=>{if(viewer){viewer.camera.position.set(0,1.25,5.7);viewer.controls.target.set(0,1.15,0);viewer.controls.update();}$('rotation').value=0;viewer?.setRotation(0);updateLabels();};
 $('applyCharacter').onclick=()=>run($('applyCharacter'),async()=>{
  if(!previewReady)throw new Error('Preview a character before applying.');

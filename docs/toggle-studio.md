@@ -4,6 +4,10 @@ PixelFriend's display name is now **Toggle**. The source directory and bundle id
 
 ![Toggle Studio](images/toggle-studio.png)
 
+The white grid viewport has vector guides for orientation and a timeline generated from the selected GLB animation's keyframes. Drag the playhead in either direction to inspect a pose, then press Play to continue from that point. With macOS Reduce Motion enabled, the 3D clip starts paused. The original animated avatar and static GLBs do not have a seekable timeline.
+
+The input-to-time interaction follows [Oil Motion](https://github.com/oil-oil/oil-motion). The viewport renders the model and its existing clips live with Three.js.
+
 ## What's available
 
 - Overview and Character Studio: real interactive 3D preview, Orbit starter, original animated avatar, custom GLB import, clip playback, orbit/zoom, facing rotation, desktop size and movement speed.
@@ -58,6 +62,7 @@ No automatic rigging, text-to-3D inference, facial tracking or animation retarge
 - Renderer build and JavaScript syntax checks pass.
 - Headless Chromium with real WebGL/SwiftShader: animated intro, starter rendering, GLB export and reimport with all three clips, settings application, reminder update, AI-hold UI, manual Tamil note submission and a 780-pixel-wide layout passed. Native IPC was stubbed for this UI check.
 - A GLB with an embedded PNG texture loaded successfully under the production content-security policy; external model URLs remain blocked.
+- Browser motion checks passed for forward and backward seeking, visible pose changes, pause/resume, reduced-motion defaults and hiding the timeline for the original avatar.
 - Companion renderer check: actual starter rendering in the desktop canvas, settings persistence in localStorage and switching back to the original avatar passed, with Electron bridge methods stubbed.
 - The generated GLB was independently checked by the backend validator: 14 meshes, Idle/Walk/Happy clips, 243,908 bytes.
 

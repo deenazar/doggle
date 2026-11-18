@@ -73,7 +73,21 @@ class ModelView {
     const next = this.mixer.clipAction(clip);if (next === this.action) return;
     next.reset().fadeIn(.2).play();this.action?.fadeOut(.2);this.action = next;
   }
-  play(name) { const clip = this.clips?.find(c=>c.name===name);if (!clip) return;this.action?.stop();this.action = this.mixer.clipAction(clip);this.action.reset().play(); }
+  play(name) {
+    const clip = this.clips?.find(candidate => candidate.name === name);
+    if (!clip) return;
+    this.mixer.stopAllAction();
+    this.action = this.mixer.clipAction(clip);
+    this.action.reset().play();
+  }
+
+  seek(seconds) {
+    if (!this.action) return;
+    const duration = this.action.getClip().duration;
+    this.action.paused = true;
+    this.action.time = Math.min(seconds, Math.max(0, duration - 0.000001));
+    this.mixer.update(0);
+  }
   setRotation(degrees) { if (this.root) this.model.rotation.y = degrees * Math.PI/180; }
   loop(time) {
     this.frame = requestAnimationFrame(this.loop);
@@ -81,6 +95,7 @@ class ModelView {
     const delta = Math.min(this.clock.getDelta(),.1);
     if (document.hidden || !this.canvas.getClientRects().length) return;
     this.mixer?.update(delta);this.controls?.update();this.renderer.render(this.scene,this.camera);
+    this.onFrame?.(this.action);
   }
   async exportStarter() { const data = starter();return new GLTFExporter().parseAsync(data.scene,{ binary:true, animations:data.animations }); }
   dispose() { this.loadGeneration = (this.loadGeneration || 0) + 1; cancelAnimationFrame(this.frame);this.observer.disconnect();this.controls?.dispose();this.clear();this.renderer.dispose(); }
