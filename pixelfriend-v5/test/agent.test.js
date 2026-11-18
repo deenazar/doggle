@@ -110,3 +110,19 @@ test('local chat completes a tool round without giving the model approval capabi
   const result = await service.chat('Draft an email to one@example.com');
   assert.equal(calls, 2); assert.equal(result.state.pending.length, 1); assert.match(result.reply, /approval/);
 });
+
+test('WhatsApp badges only announce increases after a connected baseline', async t => {
+  const { service } = await fixture(t);
+  const counts = [7, 7, 6, 8, null, 12, 13];
+  const notices = [];
+  service.notify = (...args) => notices.push(args);
+  service.readWhatsAppCount = async () => counts.shift();
+  await service.checkWhatsApp();
+  assert.equal(counts.length, 7);
+  service.config.whatsApp = true;
+  while (counts.length) await service.checkWhatsApp();
+  assert.deepEqual(notices.map(n => n[1]), [
+    'Your unread count increased to 8.',
+    'Your unread count increased to 13.'
+  ]);
+});

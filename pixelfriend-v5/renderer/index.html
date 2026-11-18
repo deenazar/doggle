@@ -22,6 +22,9 @@ body.web::after{content:"";position:fixed;left:50%;bottom:0;transform:translateX
 /* ---------- actor ---------- */
 #actor{position:absolute;left:0;bottom:0;will-change:transform;z-index:2}
 #actor.hidden{visibility:hidden}
+#actor{transition:translate .7s ease, opacity .45s ease}
+#actor.away{translate:calc(100vw + 450px) 0;opacity:0;pointer-events:none}
+@media(prefers-reduced-motion:reduce){#actor{transition:none}}
 #charWrap{position:relative;height:var(--size);display:flex;align-items:flex-end;justify-content:center;cursor:grab}
 #actor.drag #charWrap{cursor:grabbing}
 #flip{height:100%;display:flex;align-items:flex-end;justify-content:center;transition:transform .25s var(--ease)}
@@ -259,6 +262,7 @@ const today = () => new Date().toLocaleDateString('en-CA');
 const DEF = {
   name: '', size: 220, roam: true, lap: true, come: true, speed: 1,
   interval: 30, goal: 8, qs: 23, qe: 7,
+  visitMin: 10, restMin: 50, entryMusic: true, alarmTime: '', alarmDay: '',
   eyesOn: true, eyesMin: 20, stretchOn: true, stretchMin: 60, postureOn: false, postureMin: 45,
   customOn: false, customMin: 120, customText: 'Mail check pannu 📬',
   notify: true, sound: true, meter: false, keyTol: 70, style: 'float', accent: '#FFD54A',
@@ -441,6 +445,11 @@ function goTo(x, run = false, onArrive = null) {
 function stop() { A.target = null; A.run = false; }
 let lastT = performance.now();
 function loop(t) {
+  if (actor.classList.contains('away') || actor.classList.contains('hidden')) {
+    lastT = t;
+    setTimeout(() => requestAnimationFrame(loop), 200);
+    return;
+  }
   const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
   if (A.mode === 'air') {
     A.vy -= 2400 * dt; A.x += A.vx * dt; A.y += A.vy * dt;
@@ -478,8 +487,8 @@ function keepBubbleOnScreen() {
 let nextThink = Date.now() + 4000;
 setInterval(() => {
   if (Date.now() < A.lockUntil) return;
+  if (actor.classList.contains('away') || A.hiddenUntil) return;
   if (Date.now() < nextThink || A.mode !== 'ground' || asking || busy() || A.target != null) return;
-  if (A.hiddenUntil) { if (Date.now() > A.hiddenUntil) comeBack(); return; }
   if (quiet()) { if (mood !== 'sleep') setMood('sleep'); nextThink = Date.now() + 10000; return; }
   if (mood === 'sleep') setMood('idle');
   nextThink = Date.now() + rnd(5000, 14000);
@@ -492,12 +501,16 @@ setInterval(() => {
 }, 700);
 function lookAtMouse() { setMood('ask', 2400); }
 function hideFor(ms) {
-  $('bubble').classList.remove('show'); say(pick(['Bye! Konja neram kalichu varen 👋', 'Seri, naan poren 🙈']), [], 1800);
-  setTimeout(() => goTo(innerWidth + halfW() * 2 + 40, false, () => { actor.classList.add('hidden'); A.hiddenUntil = Date.now() + ms; }), 1200);
+  if (asking) snooze(asking);
+  stop();
+  alerts.length = 0; alertUntil = 0;
+  A.hiddenUntil = Date.now() + ms;
+  refreshPresence();
 }
 function comeBack() {
-  A.hiddenUntil = 0; actor.classList.remove('hidden'); A.x = innerWidth + halfW() + 20;
-  goTo(clampX(innerWidth - 220), false, () => say(`Naan vandhutten${S.name ? ', ' + S.name : ''}! 😄`, [], 2500));
+  A.hiddenUntil = 0;
+  alertUntil = Date.now() + 8000;
+  refreshPresence();
 }
 function victoryLap(big) {
   if (!S.lap || A.mode !== 'ground') return;
@@ -557,6 +570,7 @@ const KINDS = {
 };
 function remind(kind = 'water') {
   const K = KINDS[kind]; asking = kind;
+  refreshPresence();
   const ask = () => {
     face(1);
     setMood(kind === 'stretch' ? 'stretch' : 'ask');
@@ -580,6 +594,7 @@ function drink() {
   victoryLap(goal);
 }
 function eyeBreak() {
+  promptSince = Date.now();
   let n = 20; setMood('idle'); $('actions').style.display = 'none';
   const tick = () => {
     if (asking !== 'eyes') return;
@@ -592,12 +607,58 @@ function stretched() { asking = null; S.lastS = Date.now(); H().s++; save(); set
 function simpleDone(key, text) { asking = null; S[key] = Date.now(); save(); setMood('happy', 1800); pop(1.1); say(text, [], 2000); }
 setInterval(() => {
   rollDay();
-  if (asking || busy() || A.hiddenUntil || quiet() || A.target != null || Date.now() < A.lockUntil) return;
+  if (Date.now() < alertUntil || asking || busy() || A.hiddenUntil || quiet() || A.target != null || Date.now() < A.lockUntil) return;
   for (const kind of ['water', 'eyes', 'stretch', 'posture', 'custom']) {
     const K = KINDS[kind];
     if (K.on() && Date.now() - S[K.key] >= K.min() * 60000) { remind(kind); return; }
   }
 }, 5000);
+
+// Absolute times keep the visit aligned after the computer wakes from sleep.
+let cycleStarted = Date.now(), alertUntil = 0, promptSince = 0;
+const alerts = [];
+const welcomeMusic = new Audio('audio/welcome.ogg');
+welcomeMusic.volume = 0.35;
+function queueAlert({ title, body }) {
+  if (A.hiddenUntil || quiet()) return;
+  alerts.push({ title, body, at: Date.now() });
+  if (alerts.length > 20) alerts.shift();
+  refreshPresence();
+}
+function refreshPresence() {
+  const now = Date.now();
+  if (A.hiddenUntil && now >= A.hiddenUntil) A.hiddenUntil = 0;
+  const elapsed = Math.max(0, now - cycleStarted);
+  const resting = elapsed % ((S.visitMin + S.restMin) * 60000) >= S.visitMin * 60000;
+  const interacting = busy() || down || menu.classList.contains('show');
+  if (asking && resting) {
+    if (!promptSince) promptSince = now;
+    if (!interacting && now - promptSince >= 30000) snooze(asking);
+  } else promptSince = 0;
+  while (alerts.length && now - alerts[0].at > 120000) alerts.shift();
+  if (alerts.length && !interacting && !asking && !A.hiddenUntil && !quiet() && now >= alertUntil) {
+    const { title, body } = alerts.shift();
+    alertUntil = now + 8000;
+    stop(); setMood('ask', 8000); say(title + '\n' + String(body).slice(0, 240), [], 8000);
+  }
+  const away = !!A.hiddenUntil || (resting && !asking && !interacting && now >= alertUntil);
+  if (away && !actor.classList.contains('away')) {
+    stop();
+    if (isApp && !interacting) releaseMouse();
+  }
+  actor.classList.toggle('away', !!away);
+}
+function checkAlarm() {
+  const d = new Date();
+  const time = [d.getHours(), d.getMinutes()].map(n => String(n).padStart(2, '0')).join(':');
+  if (S.alarmTime !== time || S.alarmDay === today()) return;
+  S.alarmDay = today(); save();
+  if (quiet()) return;
+  const alarm = { title: 'Toggle alarm', body: time };
+  if (isApp && S.notify) window.pf.notify(alarm.title, alarm.body);
+  queueAlert(alarm);
+}
+setInterval(() => { checkAlarm(); refreshPresence(); }, 500);
 
 /* ======================= mouse: drag, throw, pet, click ======================= */
 const mouse = { x: null, y: null };
@@ -676,20 +737,19 @@ menu.addEventListener('click', e => {
 });
 
 /* click-through for the desktop window */
+let ignoring = true;
+function releaseMouse() { ignoring = true; window.pf.ignoreMouse(true); }
 if (isApp) {
   const hit = el => el && el.closest('#charWrap,#bubble.show,#menu.show,.panel.show');
-  let ignoring = true;
   window.addEventListener('mousemove', e => {
     const want = !(down || hit(document.elementFromPoint(e.clientX, e.clientY)));
     if (want !== ignoring) { ignoring = want; window.pf.ignoreMouse(want); }
   });
-  window.pf.on('agent-alert', ({ title, body }) => {
-    if (asking || busy() || A.hiddenUntil) return;
-    stop(); setMood('ask', 8000); say(`${title}\n${String(body).slice(0, 240)}`, [], 8000);
-  });
-  window.pf.on('drink', drink);
+  window.pf.on('agent-alert', queueAlert);
+  window.pf.on('visit', comeBack);
+  window.pf.on('drink', () => { comeBack(); drink(); });
   window.pf.on('remind', () => remind('water'));
-  window.pf.on('run', () => goTo(clampX(A.x > innerWidth / 2 ? 80 : innerWidth - 80), true));
+  window.pf.on('run', () => { comeBack(); goTo(clampX(A.x > innerWidth / 2 ? 80 : innerWidth - 80), true); });
   window.pf.on('stats', openStats);
   window.pf.on('settings', openSettings);
   window.pf.on('hide', () => hideFor(3600000));
@@ -768,14 +828,22 @@ addEventListener('resize', () => { A.x = clampX(A.x); });
 
 window.toggleDesktop = {
   getSettings: () => JSON.parse(JSON.stringify(S)),
-  updateSettings: config => { Object.assign(S, config); save(); applyLook(); return JSON.parse(JSON.stringify(S)); }
+  updateSettings: config => {
+    const visitsChanged = (config.visitMin ?? S.visitMin) !== S.visitMin || (config.restMin ?? S.restMin) !== S.restMin;
+    Object.assign(S, config);
+    if (visitsChanged) cycleStarted = Date.now();
+    if (!S.entryMusic) welcomeMusic.pause();
+    save(); applyLook(); refreshPresence();
+    return JSON.parse(JSON.stringify(S));
+  }
 };
 /* ======================= start ======================= */
 loadImgs().catch(() => {}).then(() => {
   applyLook(); face(1); A.x = clampX(innerWidth - 220);
   setMood(quiet() ? 'sleep' : 'idle');
   requestAnimationFrame(loop);
-  setTimeout(() => say(S.name ? `Hi ${S.name}! 👋` : 'Hi! Ennai right-click pannunga 👋', [], 3500), 700);
+  if (S.entryMusic && !quiet()) welcomeMusic.play().catch(() => {});
+  setTimeout(() => !asking && Date.now() >= alertUntil && say(S.name ? `Hi ${S.name}! 👋` : 'Hi! Ennai right-click pannunga 👋', [], 3500), 700);
 });
 })();
 </script>

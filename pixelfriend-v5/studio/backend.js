@@ -25,7 +25,7 @@ function registerStudio({ ipcMain, shell, getWindow, getBuddy, service }) {
       buddyWindow.show();
       buddyWindow.webContents.send('pf:settings');
     },
-    visibility:visible=>{if(typeof visible!=='boolean')throw new Error('Invalid visibility');visible?getBuddy()?.show():getBuddy()?.hide();return visible;}
+    visibility:visible=>{if(typeof visible!=='boolean')throw new Error('Invalid visibility');const buddyWindow=getBuddy();if(visible){buddyWindow?.show();buddyWindow?.webContents.send('pf:visit');}else buddyWindow?.hide();return visible;}
   };
   const studioURL=pathToFileURL(path.join(__dirname,'../renderer/studio.html')).href;
   for (const [name,handler] of Object.entries(handlers)) ipcMain.handle('studio:'+name,async(event,...args)=>{
