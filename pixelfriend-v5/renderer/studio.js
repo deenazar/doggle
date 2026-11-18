@@ -41,7 +41,19 @@ for (const button of moodButtons) {
 }
 
 function readCharacterPreferences(){const c={name:$('buddyName').value,accent:$('accent').value,style:$('bubbleStyle').value};for(const k of ['size','speed'])c[k]=Number($(k).value);for(const k of ['roam','lap','come','sound','meter'])c[k]=$(k).checked;return c;}
-function fillPreferences(s){for(const k of numeric)if(s[k]!=null)$(k).value=s[k];for(const k of booleans)$(k).checked=!!s[k];$('buddyName').value=s.name||'';$('accent').value=s.accent||'#2563eb';$('bubbleStyle').value=s.style||'float';$('customText').value=s.customText||'';updateLabels();}
+$('saveVisits').onclick = () => run($('saveVisits'), async () => {
+ const fields = ['visitMin', 'restMin'].map($);
+ if (!fields.every(field => field.value && field.reportValidity())) throw new Error('Enter both visit durations in minutes.');
+ await window.studio.preferences({
+   visitMin: Number(fields[0].value), restMin: Number(fields[1].value),
+   entryMusic: $('entryMusic').checked, alarmTime: $('alarmTime').value
+ });
+ toast('Desktop visits saved.');
+});
+function fillPreferences(s){
+ $('visitMin').value=s.visitMin ?? 10; $('restMin').value=s.restMin ?? 50;
+ $('entryMusic').checked=s.entryMusic ?? true; $('alarmTime').value=s.alarmTime || '';
+ for(const k of numeric)if(s[k]!=null)$(k).value=s[k];for(const k of booleans)$(k).checked=!!s[k];$('buddyName').value=s.name||'';$('accent').value=s.accent||'#2563eb';$('bubbleStyle').value=s.style||'float';$('customText').value=s.customText||'';updateLabels();}
 function updateLabels() {
   $('sizeOutput').textContent = $('size').value + ' px';
   $('speedOutput').textContent = $('speed').value + '×';
@@ -69,11 +81,15 @@ $('toggleVisibility').onclick = () => run($('toggleVisibility'), async () => {
 });
 $('legacyAppearance').onclick=()=>run(null,()=>window.studio.legacy());
 $('saveReminders').onclick=()=>run($('saveReminders'),async()=>{const c={customText:$('customText').value};for(const k of numeric.filter(k=>!['size','speed'].includes(k)))c[k]=Number($(k).value);for(const k of ['eyesOn','stretchOn','postureOn','customOn','notify'])c[k]=$(k).checked;await window.studio.preferences(c);toast('Your reminder rhythm is saved.');});
-function fillConnection(agent){state.agent=agent;$('googleStatus').textContent=agent.connected?'Connected to Google':'Not connected';$('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
+function fillConnection(agent){state.agent=agent;
+ $('whatsAppCard').hidden=!agent.whatsAppSupported;
+ $('whatsApp').checked=!!agent.config.whatsApp;
+ $('whatsAppStatus').textContent=agent.whatsAppStatus || '';
+ $('googleStatus').textContent=agent.connected?'Connected to Google':'Not connected';$('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
 $('connectGoogle').onclick=()=>run($('connectGoogle'),async()=>{if(!$('clientId').value.trim()||!$('clientSecret').value.trim()){document.querySelector('.oauth-details').open=true;$('clientId').focus();throw new Error('Enter your Google Desktop OAuth client details in Google setup first.');}toast('Finish Google sign-in in your browser.');try{fillConnection(await window.studio.connect($('clientId').value.trim(),$('clientSecret').value.trim()));toast('Google connected.');}finally{$('clientSecret').value='';}});
 $('disconnectGoogle').onclick=()=>run($('disconnectGoogle'),async()=>{fillConnection(await window.studio.disconnect());await refreshApprovals();toast('Google disconnected locally.');});
 $('searchCity').onclick=()=>run($('searchCity'),async()=>{const places=await window.studio.places($('weatherCity').value.trim());$('weatherPlace').replaceChildren(...places.map(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;return o;}));toast(places.length?'Choose your location, then save connections.':'No places found. Try the English city name.');});
-$('saveConnections').onclick=()=>run($('saveConnections'),async()=>{const next=await window.studio.configure({model:state.agent.config.model,notifications:$('googleNotifications').checked,weatherAlerts:$('weatherAlerts').checked,heatThreshold:Number($('heatThreshold').value),placeId:$('weatherPlace').value});fillConnection(next);toast('Connections and alerts saved.');});
+$('saveConnections').onclick=()=>run($('saveConnections'),async()=>{const next=await window.studio.configure({model:state.agent.config.model,notifications:$('googleNotifications').checked,whatsApp:$('whatsApp').checked,weatherAlerts:$('weatherAlerts').checked,heatThreshold:Number($('heatThreshold').value),placeId:$('weatherPlace').value});fillConnection(next);toast('Connections and alerts saved.');});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{for(const n of ['notes','files','email'])$(n+'Tool').hidden=n!==b.dataset.tool;};
 function results(items){$('toolResults').replaceChildren();for(const item of items){const el=document.createElement('article');el.className='tool-result';el.textContent=typeof item==='string'?item:Object.entries(item).map(([k,v])=>`${k}: ${typeof v==='object'?JSON.stringify(v):v}`).join('\n');$('toolResults').append(el);}}
 $('saveNote').onclick=()=>run($('saveNote'),async()=>{const r=await window.studio.action('save_note',{title:$('noteTitle').value,body:$('noteBody').value});toast('Note saved: '+r.title);$('noteTitle').value='';$('noteBody').value='';});

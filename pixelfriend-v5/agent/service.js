@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const files = require('./files');
+const { unreadCount } = require('./whatsapp');
 const { Google, validateDraft } = require('./google');
 const schema = (name, description, properties = {}, required = []) => ({ type: 'function', function: { name, description, parameters: { type: 'object', properties, required, additionalProperties: false } } });
 const text = description => ({ type: 'string', description });
@@ -21,13 +22,16 @@ class AgentService {
   constructor({ directory, downloads, safeStorage, openExternal, notify }) {
     this.directory = directory; this.downloads = downloads; this.safeStorage = safeStorage;
     this.notify = notify; this.pending = new Map(); this.places = new Map(); this.history = []; this.busy = false; this.polling = false;
-    this.config = { model: 'qwen3:4b', notifications: false, weatherAlerts: false, heatThreshold: 32, location: null };
+    this.whatsAppSupported = process.platform === 'darwin';
+    this.whatsAppCount = null;
+    this.readWhatsAppCount = unreadCount;
+    this.config = { model: 'qwen3:4b', notifications: false, whatsApp: false, weatherAlerts: false, heatThreshold: 32, location: null };
     this.seenMail = new Set(); this.seenEvents = new Set(); this.mailSeeded = false;
     this.google = new Google({ read: () => this.readTokens(), write: t => this.writeTokens(t), openExternal });
   }
   async init() {
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
-    try { const c = JSON.parse(await fs.readFile(path.join(this.directory, 'settings.json'), 'utf8')); this.config.model = typeof c.model === 'string' && /^[\w.:/-]{1,100}$/.test(c.model) ? c.model : 'qwen3:4b'; this.config.notifications = c.notifications === true; this.config.weatherAlerts = c.weatherAlerts === true; this.config.heatThreshold = Number.isFinite(c.heatThreshold) && c.heatThreshold >= 20 && c.heatThreshold <= 50 ? c.heatThreshold : 32; if (c.location && Number.isFinite(c.location.latitude) && Number.isFinite(c.location.longitude) && typeof c.location.name === 'string') this.config.location = c.location; } catch {}
+    try { const c = JSON.parse(await fs.readFile(path.join(this.directory, 'settings.json'), 'utf8')); this.config.model = typeof c.model === 'string' && /^[\w.:/-]{1,100}$/.test(c.model) ? c.model : 'qwen3:4b'; this.config.notifications = c.notifications === true; this.config.whatsApp = this.whatsAppSupported && c.whatsApp === true; this.config.weatherAlerts = c.weatherAlerts === true; this.config.heatThreshold = Number.isFinite(c.heatThreshold) && c.heatThreshold >= 20 && c.heatThreshold <= 50 ? c.heatThreshold : 32; if (c.location && Number.isFinite(c.location.latitude) && Number.isFinite(c.location.longitude) && typeof c.location.name === 'string') this.config.location = c.location; } catch {}
     try { const s = JSON.parse(await fs.readFile(path.join(this.directory, 'seen.json'), 'utf8')); this.seenMail = new Set(s.mail || []); this.seenEvents = new Set(s.events || []); this.mailSeeded = !!s.seeded; } catch {}
     this.timer = setInterval(() => this.poll().catch(() => {}), 60000); this.timer.unref();
   }
@@ -46,7 +50,7 @@ class AgentService {
   async state() {
     this.expire();
     let connected = false; try { connected = !!(await this.readTokens())?.access_token; } catch {}
-    return { config: this.config, connected, pending: [...this.pending.values()].map(({ plan, ...p }) => p), pollError: this.pollError || '', notesFolder: path.join(this.directory, 'notes') };
+    return { config: this.config, connected, whatsAppSupported: this.whatsAppSupported, whatsAppStatus: this.whatsAppStatus || '', pending: [...this.pending.values()].map(({ plan, ...p }) => p), pollError: this.pollError || '', notesFolder: path.join(this.directory, 'notes') };
   }
   async configure(config) {
     if (!config || typeof config.model !== 'string' || !/^[\w.:/-]{1,100}$/.test(config.model) || typeof config.notifications !== 'boolean') throw new Error('Enter a valid installed Ollama model name.');
@@ -59,8 +63,12 @@ class AgentService {
     }
     if (config.weatherAlerts && !location) throw new Error('Select a weather location first.');
     if (config.weatherAlerts !== this.config.weatherAlerts || threshold !== this.config.heatThreshold || location?.id !== this.config.location?.id) { this.lastWeatherCheck = 0; this.wasHot = false; }
-    this.config = { model: config.model, notifications: config.notifications, weatherAlerts: config.weatherAlerts === true, heatThreshold: threshold, location };
+    const whatsApp = this.whatsAppSupported && (config.whatsApp ?? this.config.whatsApp) === true;
+    const changed = whatsApp !== this.config.whatsApp;
+    if (changed) { this.whatsAppCount = null; this.whatsAppStatus = ''; }
+    this.config = { model: config.model, notifications: config.notifications, whatsApp, weatherAlerts: config.weatherAlerts === true, heatThreshold: threshold, location };
     await fs.writeFile(path.join(this.directory, 'settings.json'), JSON.stringify(this.config), { mode: 0o600 });
+    if (changed && whatsApp) await this.checkWhatsApp();
     return this.state();
   }
   expire() { for (const [id, p] of this.pending) if (Date.now() > p.expiresAt) this.pending.delete(id); }
@@ -184,13 +192,13 @@ class AgentService {
     return { location: `${p.name}, ${p.admin1 || ''}, ${p.country}`, current: weather.current, units: weather.current_units, source: 'Open-Meteo (https://open-meteo.com/)' };
   }
   async poll() {
-    if ((!this.config.notifications && !this.config.weatherAlerts) || this.polling) return;
+    if ((!this.config.notifications && !this.config.weatherAlerts && !this.config.whatsApp) || this.polling) return;
     this.polling = true;
     try {
       const results = await Promise.allSettled([
         this.config.notifications ? this.google.inbox() : Promise.resolve(null),
         this.config.notifications ? this.google.calendar() : Promise.resolve(null),
-        this.checkHeat()
+        this.checkHeat(), this.checkWhatsApp()
       ]);
       const mail = results[0].status === 'fulfilled' ? results[0].value : null;
       const events = results[1].status === 'fulfilled' ? results[1].value : null;
@@ -212,6 +220,22 @@ class AgentService {
       this.seenMail = new Set([...this.seenMail].slice(-500)); this.seenEvents = new Set([...this.seenEvents].slice(-500));
       await fs.writeFile(path.join(this.directory, 'seen.json'), JSON.stringify({ mail: [...this.seenMail], events: [...this.seenEvents], seeded: this.mailSeeded }), { mode: 0o600 });
     } finally { this.polling = false; }
+  }
+  async checkWhatsApp() {
+    if (!this.config.whatsApp || this.readingWhatsApp) return;
+    this.readingWhatsApp = true;
+    try {
+      const count = await this.readWhatsAppCount();
+      if (!this.config.whatsApp) return;
+      if (count !== null && this.whatsAppCount !== null && count > this.whatsAppCount) {
+        this.notify('WhatsApp Web', 'Your unread count increased to ' + count + '.');
+      }
+      this.whatsAppCount = count;
+      this.whatsAppStatus = count === null ? 'Open WhatsApp Web in Google Chrome.' : 'Watching the unread badge in Chrome.';
+    } catch {
+      this.whatsAppCount = null;
+      this.whatsAppStatus = 'Open Chrome and allow Toggle to control Google Chrome in System Settings → Privacy & Security → Automation.';
+    } finally { this.readingWhatsApp = false; }
   }
   async checkHeat() {
     if (!this.config.weatherAlerts || !this.config.location || Date.now() - (this.lastWeatherCheck || 0) < 30 * 60000) return;

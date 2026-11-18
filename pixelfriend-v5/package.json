@@ -27,6 +27,10 @@
     ],
     "mac": {
       "target": "dmg",
+      "entitlements": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Toggle checks the WhatsApp Web unread badge in Google Chrome when you enable WhatsApp alerts."
+      },
       "icon": "build/icon.icns"
     },
     "win": {

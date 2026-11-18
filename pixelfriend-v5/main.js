@@ -70,7 +70,7 @@ async function createWindow() {
     ...workArea,
     transparent: true, frame: false, resizable: false, movable: false,
     alwaysOnTop: true, skipTaskbar: true, hasShadow: false, roundedCorners: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, backgroundThrottling: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' }
   });
   secureWindow(win);
   win.setAlwaysOnTop(true, 'floating');
@@ -100,7 +100,10 @@ function buildTray() {
     { label: 'Customize…', click: openStudio },
     { type: 'separator' },
     { label: 'Hide for 1 hour', click: send('hide') },
-    { label: 'Show / Hide buddy', click: () => win.isVisible() ? win.hide() : win.show() },
+    { label: 'Show / Hide buddy', click: () => {
+      if (win.isVisible()) win.hide();
+      else { win.show(); win.webContents.send('pf:visit'); }
+    } },
     { label: 'Start with computer', type: 'checkbox',
       checked: app.getLoginItemSettings().openAtLogin,
       click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
