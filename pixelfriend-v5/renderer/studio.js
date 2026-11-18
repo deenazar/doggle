@@ -69,17 +69,62 @@ $('toggleVisibility').onclick = () => run($('toggleVisibility'), async () => {
 });
 $('legacyAppearance').onclick=()=>run(null,()=>window.studio.legacy());
 $('saveReminders').onclick=()=>run($('saveReminders'),async()=>{const c={customText:$('customText').value};for(const k of numeric.filter(k=>!['size','speed'].includes(k)))c[k]=Number($(k).value);for(const k of ['eyesOn','stretchOn','postureOn','customOn','notify'])c[k]=$(k).checked;await window.studio.preferences(c);toast('Your reminder rhythm is saved.');});
-function fillConnection(agent){state.agent=agent;$('googleStatus').textContent=agent.connected?'Connected to Google':'Not connected';$('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
-$('connectGoogle').onclick = () => run($('connectGoogle'), async () => {
- const id = $('clientId').value.trim();
- const secret = $('clientSecret').value.trim();
- if (Boolean(id) !== Boolean(secret)) throw new Error('Enter both manual fields or clear them to use a JSON file.');
- try {
-   const agent = await window.studio.connect(id, secret);
-   if (agent) { fillConnection(agent); toast('Google connected.'); }
- } finally { $('clientSecret').value = ''; }
+function fillConnection(agent){state.agent=agent;$('googleStatus').textContent=agent.connected?'Connected to Google':'Guest';
+ $('connectGoogle').hidden=agent.connected;
+ $('disconnectGoogle').hidden=!agent.connected;
+ $('googleNotifications').disabled=!agent.connected;
+ $('googleNotifications').checked=agent.config.notifications;$('weatherAlerts').checked=agent.config.weatherAlerts;$('heatThreshold').value=agent.config.heatThreshold;const p=agent.config.location;if(p){const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;$('weatherPlace').replaceChildren(o);}}
+const welcome = $('welcome');
+let signingIn = null;
+function rememberGuest() {
+  localStorage.setItem('toggleGuest', '1');
+  if (welcome.open) welcome.close();
+}
+async function enterAsGuest() {
+  if (signingIn) {
+    $('welcomeGuest').disabled = true;
+    try {
+      await window.studio.cancelSignIn();
+      await signingIn;
+    } finally { $('welcomeGuest').disabled = false; }
+    if (state.agent.connected) return;
+  }
+  rememberGuest();
+}
+function signIn() {
+  if (signingIn) return signingIn;
+  $('welcomeGoogle').disabled = $('connectGoogle').disabled = true;
+  $('welcomeStatus').textContent = 'Choose your Google account in your browser.';
+  if (!welcome.open) toast($('welcomeStatus').textContent);
+  signingIn = (async () => {
+    try {
+      const agent = await window.studio.connect();
+      fillConnection(agent);
+      localStorage.removeItem('toggleGuest');
+      if (welcome.open) welcome.close();
+      toast('Gmail and Calendar connected.');
+    } catch (error) {
+      if (welcome.open) $('welcomeStatus').textContent = error.message;
+      else toast(error.message, true);
+    } finally {
+      $('welcomeGoogle').disabled = $('connectGoogle').disabled = false;
+      signingIn = null;
+    }
+  })();
+  return signingIn;
+}
+$('welcomeGoogle').onclick = $('connectGoogle').onclick = signIn;
+$('welcomeGuest').onclick = () => run(null, enterAsGuest);
+welcome.addEventListener('cancel', event => {
+  event.preventDefault();
+  run(null, enterAsGuest);
 });
-$('disconnectGoogle').onclick=()=>run($('disconnectGoogle'),async()=>{fillConnection(await window.studio.disconnect());await refreshApprovals();toast('Google disconnected locally.');});
+$('disconnectGoogle').onclick = () => run($('disconnectGoogle'), async () => {
+  fillConnection(await window.studio.disconnect());
+  rememberGuest();
+  await refreshApprovals();
+  toast('You are using Toggle as a guest.');
+});
 $('searchCity').onclick=()=>run($('searchCity'),async()=>{const places=await window.studio.places($('weatherCity').value.trim());$('weatherPlace').replaceChildren(...places.map(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=`${p.name}, ${p.admin1||''}, ${p.country}`;return o;}));toast(places.length?'Choose your location, then save connections.':'No places found. Try the English city name.');});
 $('saveConnections').onclick=()=>run($('saveConnections'),async()=>{const next=await window.studio.configure({model:state.agent.config.model,notifications:$('googleNotifications').checked,weatherAlerts:$('weatherAlerts').checked,heatThreshold:Number($('heatThreshold').value),placeId:$('weatherPlace').value});fillConnection(next);toast('Connections and alerts saved.');});
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{for(const n of ['notes','files','email'])$(n+'Tool').hidden=n!==b.dataset.tool;};
@@ -105,13 +150,15 @@ $('openCharacterEditor').onclick = () => run($('openCharacterEditor'), async () 
 
 (async () => {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  setTimeout(() => $('splash').classList.add('finished'), reducedMotion ? 100 : 1250);
+  const splashDelay = new Promise(resolve => setTimeout(resolve, reducedMotion ? 100 : 1250));
   try {
     state = await window.studio.state();
     fillPreferences(state.desktop);
     updateVisibility(state.visible ?? true);
     fillConnection(state.agent);
+    await splashDelay;
+    if (!state.agent.connected && !localStorage.getItem('toggleGuest')) welcome.showModal();
   } catch (error) {
     toast('Studio could not load: ' + error.message, true);
-  }
+  } finally { $('splash').classList.add('finished'); }
 })();

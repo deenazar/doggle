@@ -3,8 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
 const { validatePreferences } = require('./character');
-const { selectDesktopClient } = require('./google-client');
-function registerStudio({ ipcMain, shell, dialog, localClientFile, getWindow, getBuddy, service }) {
+function registerStudio({ ipcMain, shell, connectGoogle, cancelGoogle, getWindow, getBuddy, service }) {
   const buddy = async (method, value) => {
     const window = getBuddy();if (!window || window.isDestroyed()) throw new Error('Desktop companion is not ready.');
     return window.webContents.executeJavaScript(`window.toggleDesktop.${method}(${value === undefined ? '' : JSON.stringify(value)})`);
@@ -17,24 +16,7 @@ function registerStudio({ ipcMain, shell, dialog, localClientFile, getWindow, ge
       return service.tool(name,args);
     },
     approve: (id,edits) => service.approve(id,edits), cancel:id=>service.cancel(id),
-    connect: async (id, secret) => {
-      if (!service.encryptedAvailable()) throw new Error('OS credential encryption unavailable');
-      if (!id && !secret) {
-        const client = await selectDesktopClient(localClientFile, async () => {
-          const result = await dialog.showOpenDialog(getWindow(), {
-            title: 'Choose Google Desktop OAuth client JSON',
-            properties: ['openFile'], filters: [{ name: 'Google OAuth client', extensions: ['json'] }]
-          });
-          return result.canceled ? null : result.filePaths[0];
-        });
-        if (!client) return null;
-        id = client.clientId;
-        secret = client.secret;
-      }
-      if (typeof id !== 'string' || typeof secret !== 'string' || id.length > 300 || secret.length > 300) throw new Error('Invalid credentials');
-      await service.google.connect(id, secret);
-      return service.state();
-    },
+    connect: connectGoogle, cancelSignIn: cancelGoogle,
     disconnect:()=>service.disconnect(), configure:config=>service.configure(config), places:city=>service.findPlaces(city),
     notes:async()=>{ const p=path.join(service.directory,'notes');await fs.mkdir(p,{recursive:true});const error=await shell.openPath(p);if(error)throw new Error(error); },
     legacy: () => {

@@ -3,30 +3,33 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events.readonly';
 async function jsonFetch(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(30000) });
+  const response = await fetch(url, { ...options, signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000) });
   const data = await response.json();
   if (!response.ok) throw new Error(`Google request failed (${response.status}): ${data.error?.message || data.error_description || 'Check account permissions'}`);
   return data;
 }
 class Google {
   constructor({ read, write, openExternal }) { this.read = read; this.write = write; this.openExternal = openExternal; this.connecting = false; }
-  async connect(clientId, clientSecret) {
+  async connect(clientId, clientSecret, signal) {
     if (this.connecting) throw new Error('Google sign-in already in progress');
     if (!clientId.endsWith('.apps.googleusercontent.com') || !clientSecret) throw new Error('Enter your Google Desktop OAuth client ID and secret.');
+    signal?.throwIfAborted();
     this.connecting = true;
     const state = crypto.randomBytes(32).toString('base64url');
     const verifier = crypto.randomBytes(48).toString('base64url');
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
-    let server, timer;
+    let server, timer, cancel;
     try {
       const codePromise = new Promise((resolve, reject) => {
+        cancel = () => reject(new Error('Sign-in cancelled.'));
+        signal?.addEventListener('abort', cancel, { once: true });
         server = http.createServer((req, res) => {
           const url = new URL(req.url, 'http://127.0.0.1');
           if (url.pathname !== '/callback') { res.writeHead(404).end(); return; }
           if (url.searchParams.get('state') !== state) { res.writeHead(403).end('Invalid sign-in state'); return; }
           res.setHeader('Content-Type', 'text/plain; charset=utf-8');
           const code = url.searchParams.get('code');
-          res.end(code ? 'Authorization received. Return to PixelFriend to check connection status.' : 'Sign-in cancelled. Return to PixelFriend.');
+          res.end(code ? 'Authorization received. Return to Toggle to check connection status.' : 'Sign-in cancelled. Return to Toggle.');
           if (code) resolve(code); else reject(new Error('Google sign-in cancelled'));
         });
         server.on('error', reject);
@@ -37,11 +40,17 @@ class Google {
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
       const redirect = `http://127.0.0.1:${server.address().port}/callback`;
       const params = new URLSearchParams({ client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: SCOPES, state, code_challenge: challenge, code_challenge_method: 'S256', access_type: 'offline', prompt: 'consent' });
+      signal?.throwIfAborted();
       await this.openExternal('https://accounts.google.com/o/oauth2/v2/auth?' + params);
       const code = await codePromise;
-      const token = await jsonFetch('https://oauth2.googleapis.com/token', { method: 'POST', body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, code_verifier: verifier, redirect_uri: redirect, grant_type: 'authorization_code' }) });
+      const token = await jsonFetch('https://oauth2.googleapis.com/token', { method: 'POST', signal, body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, code_verifier: verifier, redirect_uri: redirect, grant_type: 'authorization_code' }) });
+      signal?.throwIfAborted();
+      const granted = new Set((token.scope ?? SCOPES).split(' '));
+      if (!SCOPES.split(' ').every(scope => granted.has(scope))) {
+        throw new Error('To connect Gmail and Calendar together, allow all three requested permissions. You can also continue as guest.');
+      }
       await this.write({ clientId, clientSecret, ...token, expiresAt: Date.now() + token.expires_in * 1000 });
-    } finally { clearTimeout(timer); server?.close(); this.connecting = false; }
+    } finally { signal?.removeEventListener('abort', cancel); clearTimeout(timer); server?.close(); this.connecting = false; }
   }
   async token() {
     const saved = await this.read();

@@ -59,9 +59,9 @@ $('searchCity').onclick = async () => {
 $('save').onclick = async () => { try { render(await window.agent.configure({ model: $('model').value.trim(), notifications: $('notifications').checked, weatherAlerts: $('weatherAlerts').checked, heatThreshold: Number($('heatThreshold').value), placeId: $('place').value })); status('Settings saved'); } catch (e) { status(e.message, true); } };
 $('connect').onclick = async () => {
   $('connect').disabled = true; status('Complete Google sign-in in your browser…');
-  try { await window.agent.connect($('clientId').value.trim(), $('clientSecret').value.trim()); status('Google connected'); await refresh(); }
+  try { await window.agent.connect(); status('Google connected'); await refresh(); }
   catch (e) { status(e.message, true); }
-  finally { $('clientSecret').value = ''; $('connect').disabled = false; }
+  finally { $('connect').disabled = false; }
 };
 $('disconnect').onclick = async () => { try { render(await window.agent.disconnect()); status('Local credentials removed. Revoke access in your Google Account settings if desired.'); } catch (e) { status(e.message, true); } };
 $('notes').onclick = async () => { try { await window.agent.notes(); } catch (e) { status(e.message, true); } };

@@ -21,7 +21,7 @@ npm install --include=dev
 npm start
 ```
 
-To package a Mac installer on macOS:
+To package a Mac installer on macOS, configure the publisher’s Desktop OAuth client as described in the [release maintainer setup](personal-agent.md#release-maintainer-setup), then run:
 
 ```sh
 npm run dist -- --mac dmg
@@ -32,7 +32,7 @@ Quit the previous app before opening Toggle. The bundle ID is retained, and Togg
 
 ## Connections and tools
 
-Google and weather settings are under **Connections**. Set up Google with a Desktop OAuth client and browser consent. See the [Google setup instructions](personal-agent.md). Local AI remains on hold. Notes, Downloads previews and manually composed email drafts work through the direct controls in **Files & Notes**. Moves and sends require approval.
+Google and weather settings are under **Connections**. Choose **Sign in with Google** and approve Gmail and Calendar access in the browser, or choose **Continue as guest** at launch for local features. Local AI remains on hold. Notes, Downloads previews and manually composed email drafts work through the direct controls in **Files & Notes**. Moves and sends require approval.
 
 ## Verification
 

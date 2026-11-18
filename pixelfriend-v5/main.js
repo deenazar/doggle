@@ -1,6 +1,6 @@
 // PixelFriend — main process
 // One transparent, click-through window covers the whole screen so the avatar can roam anywhere.
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, dialog, Notification, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, Notification, safeStorage, shell } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('node:url');
 const fs = require('node:fs/promises');
@@ -34,16 +34,28 @@ function openAgent() {
   agentWindow.loadFile(path.join(__dirname, 'renderer', 'agent.html'));
   agentWindow.on('closed', () => { agentWindow = null; });
 }
+const { readDesktopClient } = require('./studio/google-client');
+let signIn;
+async function connectGoogle() {
+  if (signIn) throw new Error('Google sign-in is already open in your browser.');
+  if (!agentService.encryptedAvailable()) throw new Error('Unlock your system keychain to sign in.');
+  signIn = new AbortController();
+  try {
+    const file = app.isPackaged ? path.join(process.resourcesPath, 'google-client.json')
+      : process.env.TOGGLE_GOOGLE_CLIENT_FILE || path.join(__dirname, '.local', 'google-client.json');
+    let client;
+    try { client = await readDesktopClient(file); }
+    catch { throw new Error('Google sign-in is unavailable in this build. You can continue as guest.'); }
+    await agentService.google.connect(client.client_id, client.client_secret, signIn.signal);
+    return agentService.state();
+  } finally { signIn = null; }
+}
 function registerAgent() {
   const handlers = {
     places: city => agentService.findPlaces(city),
     state: () => agentService.state(), models: () => agentService.models(),
     chat: message => agentService.chat(message), configure: config => agentService.configure(config),
-    connect: async (id, secret) => {
-      if (!agentService.encryptedAvailable()) throw new Error('Secure OS credential storage is unavailable.');
-      if (typeof id !== 'string' || typeof secret !== 'string' || id.length > 300 || secret.length > 300) throw new Error('Invalid Google client credentials');
-      await agentService.google.connect(id, secret); return agentService.state();
-    },
+    connect: connectGoogle,
     disconnect: () => agentService.disconnect(), approve: (id, edits) => agentService.approve(id, edits),
     cancel: id => agentService.cancel(id), notes: async () => {
       const folder = path.join(agentService.directory, 'notes'); await fs.mkdir(folder, { recursive: true });
@@ -125,7 +137,7 @@ app.whenReady().then(async () => {
     } });
   await agentService.init();
   registerAgent();
-  registerStudio({ ipcMain, shell, dialog, localClientFile: app.isPackaged ? null : path.join(__dirname, '.local', 'google-client.json'), getWindow: () => studioWindow, getBuddy: () => win, service: agentService });
+  registerStudio({ ipcMain, shell, connectGoogle, cancelGoogle: () => { signIn?.abort(); }, getWindow: () => studioWindow, getBuddy: () => win, service: agentService });
   if (process.platform === 'darwin' && app.dock) app.dock.hide();
   await createWindow();
   buildTray();
