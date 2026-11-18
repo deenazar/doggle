@@ -46,17 +46,15 @@ This adds a separate Tamil/English chat window to the desktop companion. Open it
 
 ## Connect Gmail and Google Calendar
 
-A personal Google OAuth client must be configured by you. Do not paste its credentials into chat, a GitHub issue or source code.
+Choose **Sign in with Google** in the welcome screen or in **Connections**. Select your account and approve Gmail read, Gmail send and Calendar event read access in the browser. Toggle stores the account grant locally. Choose **Continue as guest** for local features. Enable mail and calendar notifications in Connections if desired.
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), select/create a project.
-2. Enable **Gmail API** and **Google Calendar API** under APIs & Services.
-3. Configure Google Auth Platform / OAuth consent branding and audience. For an external app in Testing, add your Gmail address as a test user.
-4. Create an OAuth client of type **Desktop app**. This app uses a dynamic localhost loopback callback with PKCE and state checking; do not create a Web application client.
-5. In PixelFriend Settings, enter that client's ID and client secret, then click **Connect Google**. Complete sign-in in your browser and return to the app. The connection can time out after three minutes.
-6. Requested scopes are Gmail read-only, Gmail send, and Calendar events read-only. No Gmail deletion or Calendar mutation is implemented. Google may require verification for public distribution with these scopes; use your own test account for personal testing. Testing-mode refresh tokens may expire after seven days, requiring reconnect.
-7. Opt into Gmail/Calendar notifications and save. Allow PixelFriend notifications in macOS System Settings if prompted. Notifications require both PixelFriend and network connectivity; the local chat model need not be running for polling.
+### Release maintainer setup
 
-Google client credentials and tokens are encrypted via Electron `safeStorage` (macOS Keychain-backed protection) in the app's user data directory. If secure storage is unavailable, connection fails closed. Local disconnect removes stored credentials and disables Google polling; it does not revoke the Google grant. Revoke that separately in your Google Account's third-party connections if desired. Stored metadata/history is not an encrypted vault.
+Enable the Gmail API and Google Calendar API in the app's Google Cloud project. Configure its OAuth consent screen and create a **Desktop app** OAuth client. Save its downloaded JSON at `pixelfriend-v5/.local/google-client.json` on the build machine, or set `TOGGLE_GOOGLE_CLIENT_FILE` to its path. The same configuration works for development runs. The packager includes only the desktop client registration ID and secret in the application resources. Desktop OAuth registration is public client information recoverable from the distributed app. Account tokens are created on each user's device after consent.
+
+While the OAuth project is in Testing, grant access to the intended test accounts. To distribute to the public, publish the consent configuration and complete Google's applicable verification for the requested scopes. Testing-mode refresh tokens may expire after seven days. The app uses a loopback callback with PKCE and state validation.
+
+The signed-in account’s tokens are encrypted via Electron `safeStorage` (macOS Keychain-backed protection) in the app's user data directory. If secure storage is unavailable, connection fails closed. Local disconnect removes stored credentials and disables Google polling; it does not revoke the Google grant. Revoke that separately in your Google Account's third-party connections if desired. Stored metadata/history is not an encrypted vault.
 
 ## Approval and data boundaries
 

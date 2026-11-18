@@ -15,10 +15,8 @@
 <h2>Local AI</h2><p>Open Ollama, then run <code>ollama pull qwen3:4b</code>. Chat is processed on this Mac. Google and weather features need Internet.</p>
 <label>Ollama model <input id="model" value="qwen3:4b" maxlength="100" list="models"></label><datalist id="models"></datalist><button id="checkModels">Check Ollama</button>
 <h2>Gmail + Google Calendar</h2><p id="connection">Not connected</p>
-<p>Use a Google OAuth <strong>Desktop app</strong> client with Gmail API and Google Calendar API enabled. See <code>docs/personal-agent.md</code> for setup. Credentials are encrypted using OS storage.</p>
-<label>Client ID <input id="clientId" autocomplete="off" placeholder="…apps.googleusercontent.com"></label>
-<label>Client secret <input id="clientSecret" type="password" autocomplete="off"></label>
-<button id="connect">Connect Google</button><button id="disconnect" class="secondary">Disconnect locally</button>
+<p>Sign in through your browser to use Gmail and Calendar.</p>
+<button id="connect">Sign in with Google</button><button id="disconnect" class="secondary">Disconnect</button>
 <label class="check"><input type="checkbox" id="notifications"> App திறந்திருக்கும் போது Gmail / Calendar notifications</label>
 <p class="muted">Checks every minute: latest 10 unread inbox messages and primary calendar events starting within 10 minutes. This does not read other apps’ notifications. Existing mail is skipped on the first check.</p>
 <h2>Weather alerts</h2><label>City <input id="city" placeholder="Chennai" maxlength="100"></label><button id="searchCity">Search location</button>
