@@ -28,24 +28,111 @@ document.querySelector('.brand').onclick = event => {
 
 const previewImage = $('originalPreview');
 const moodButtons = document.querySelectorAll('[data-mood]');
-for (const button of moodButtons) {
-  button.addEventListener('click', () => {
-    previewImage.src = 'avatars/' + button.dataset.mood + '.webp';
-    const moodName = button.textContent.trim();
-    previewImage.alt = 'Original character preview: ' + moodName;
-    $('previewMood').textContent = moodName;
-    for (const moodButton of moodButtons) {
-      moodButton.setAttribute('aria-pressed', String(moodButton === button));
-    }
-  });
+const contexts = {
+ idle: 'கேரக்டர் சும்மா இருக்கும்போது',
+ walk: 'கேரக்டர் நடக்கும்போது',
+ happy: 'தண்ணீர் குடித்ததைப் பதிவு செய்து கேரக்டர் சந்தோஷப்படும்போது',
+ sleep: 'அமைதி நேரத்தில் கேரக்டர் தூங்கும்போது',
+ ask: 'கேரக்டர் நினைவூட்டல் கேட்கும்போது',
+ held: 'கேரக்டரைப் பிடித்துத் தூக்கும்போது'
+};
+let selectedMood = 'idle', previewURL, revision = 0;
+let portraitURL, portraitRevision = 0;
+async function showPortrait() {
+ const current = ++portraitRevision;
+ const file = await window.characterImages.read('idle');
+ if (current !== portraitRevision) return;
+ if (portraitURL) URL.revokeObjectURL(portraitURL);
+ portraitURL = file ? URL.createObjectURL(file) : null;
+ const isVideo = !!file?.type.startsWith('video/');
+ const video = $('portraitVideo');
+ video.hidden = !isVideo;
+ $('portraitImage').hidden = isVideo;
+ if (isVideo) video.src = portraitURL;
+ else {
+   video.pause(); video.removeAttribute('src'); video.load();
+   $('portraitImage').src = portraitURL || 'avatars/idle.webp';
+ }
 }
+async function previewMood(mood) {
+ selectedMood = mood;
+ const current = ++revision;
+ const button = Array.from(moodButtons).find(item => item.dataset.mood === mood);
+ for (const item of moodButtons) item.setAttribute('aria-pressed', String(item === button));
+ $('previewMood').textContent = button.textContent.trim();
+ $('imageContext').textContent = contexts[mood] + ' இந்தப் படம் தெரியும்.';
+ $('pictureStatus').textContent = '';
+ const file = await window.characterImages.read(mood);
+ if (current !== revision) return;
+ const video = $('videoPreview');
+ video.pause();
+ video.removeAttribute('src');
+ video.load();
+ if (previewURL) URL.revokeObjectURL(previewURL);
+ previewURL = file ? URL.createObjectURL(file) : null;
+ const isVideo = !!file?.type.startsWith('video/');
+ previewImage.hidden = isVideo;
+ video.hidden = !isVideo;
+ if (isVideo) video.src = previewURL;
+ else {
+   previewImage.src = previewURL || 'avatars/' + mood + '.webp';
+   previewImage.alt = $('previewMood').textContent + ' character image';
+ }
+ $('restorePicture').hidden = !file;
+}
+for (const button of moodButtons) button.onclick = () => run(null, () => previewMood(button.dataset.mood));
+window.characterImages.onChange(mood => {
+ if (mood === 'idle') run(null, showPortrait);
+ if (mood === selectedMood) run(null, () => previewMood(mood));
+});
+run(null, showPortrait);
+run(null, () => previewMood('idle'));
+let fileMood;
+$('choosePicture').onclick = () => { fileMood = selectedMood; $('pictureFile').click(); };
+async function applyPicture(mood, file) {
+ await window.characterImages.save(mood, file);
+ if (mood === 'idle') await showPortrait();
+ if (selectedMood !== mood) return;
+ await previewMood(mood);
+ if (selectedMood === mood) $('pictureStatus').textContent = file ? 'படம் சேமிக்கப்பட்டது. ' + contexts[mood] + ' தெரியும்.' : 'பழைய கேரக்டர் மீண்டும் அமைக்கப்பட்டது.';
+}
+$('pictureFile').onchange = () => run($('choosePicture'), async () => {
+ const file = $('pictureFile').files[0];
+ const mood = fileMood;
+ $('pictureFile').value = '';
+ if (!file) return;
+ if (!['image/png','image/jpeg','image/gif','image/webp','video/webm','video/mp4','video/quicktime'].includes(file.type))
+   throw new Error('Choose a PNG, JPEG, GIF, WebP, MP4, WebM or MOV file.');
+ const url = URL.createObjectURL(file);
+ try {
+   if (file.type.startsWith('image/')) {
+     const image = new Image(); image.src = url; await image.decode();
+   } else {
+     const video = document.createElement('video');
+     video.preload = 'metadata';
+     await new Promise((resolve, reject) => {
+       video.onloadedmetadata = resolve; video.onerror = reject; video.src = url;
+     });
+     video.removeAttribute('src'); video.load();
+   }
+ } catch { throw new Error('This file could not be opened. Try another image or video.'); }
+ finally { URL.revokeObjectURL(url); }
+ await applyPicture(mood, file);
+});
+$('restorePicture').onclick = () => run($('restorePicture'), () => applyPicture(selectedMood, null));
+function focusImageEditor() {
+ page('character');
+ $('choosePicture').focus();
+ $('choosePicture').scrollIntoView({ block: 'center' });
+}
+$('guideTop').onclick = focusImageEditor;
 
 function readCharacterPreferences(){const c={name:$('buddyName').value,accent:$('accent').value,style:$('bubbleStyle').value};for(const k of ['size','speed'])c[k]=Number($(k).value);for(const k of ['roam','lap','come','sound','meter'])c[k]=$(k).checked;return c;}
 function fillPreferences(s){for(const k of numeric)if(s[k]!=null)$(k).value=s[k];for(const k of booleans)$(k).checked=!!s[k];$('buddyName').value=s.name||'';$('accent').value=s.accent||'#2563eb';$('bubbleStyle').value=s.style||'float';$('customText').value=s.customText||'';updateLabels();}
 function updateLabels() {
   $('sizeOutput').textContent = $('size').value + ' px';
   $('speedOutput').textContent = $('speed').value + '×';
-  previewImage.style.setProperty('--avatar-scale', Number($('size').value) / 220);
+  $('stage').style.setProperty('--avatar-scale', Number($('size').value) / 220);
 }
 $('size').oninput = updateLabels;
 $('speed').oninput = updateLabels;
@@ -139,14 +226,9 @@ async function refreshApprovals(){const s=await window.studio.state();$('approva
  else{const list=document.createElement('ul');for(const m of p.details.moves){const li=document.createElement('li');li.textContent=`${m.name} → ${m.folder}/${m.name}`;list.append(li);}card.append(list);}
  const approve=document.createElement('button');approve.className='button primary';approve.textContent=p.type==='email'?'Approve & send email':'Approve & move files';const cancel=document.createElement('button');cancel.className='button secondary';cancel.textContent='Cancel';
  approve.onclick=()=>run(approve,async()=>{cancel.disabled=true;try{const r=await window.studio.approve(p.id,p.type==='email'?Object.fromEntries(Object.entries(edits).map(([k,v])=>[k,v.value])):undefined);results([p.type==='email'?'Email sent. Gmail ID: '+r.id:`Moved ${r.moved.length} files. Skipped ${r.skipped.length}.`,...(r.skipped||[])]);}finally{await refreshApprovals();}});cancel.onclick=()=>run(cancel,async()=>{await window.studio.cancel(p.id);await refreshApprovals();});card.append(approve,cancel);$('approvals').append(card);}}
-for (const id of ['openGuide', 'guideTop']) {
-  $(id).onclick = () => $('guide').showModal();
-}
+$('openGuide').onclick = () => $('guide').showModal();
 $('closeGuide').onclick = () => $('guide').close();
-$('openCharacterEditor').onclick = () => run($('openCharacterEditor'), async () => {
-  await window.studio.legacy();
-  $('guide').close();
-});
+$('openCharacterEditor').onclick = () => { $('guide').close(); focusImageEditor(); };
 
 (async () => {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;

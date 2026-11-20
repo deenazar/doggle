@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><title>Toggle Studio</title><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="studio-avatar.css"><script src="studio.js" defer></script></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><title>Toggle Studio</title><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="studio-avatar.css"><script src="character-images.js" defer></script><script src="studio.js" defer></script></head><body>
 <svg class="icon-defs" aria-hidden="true"><defs>
 <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
 <symbol id="i-face" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="5"/><path d="M12 2v4M8 11v2m8-2v2m-7 3c2 2 4 2 6 0"/></symbol>
@@ -23,11 +23,11 @@
 <div class="studio-grid">
 <section class="profile-card" aria-labelledby="profileTitle">
   <h2 id="profileTitle">Companion profile</h2>
-  <div class="profile-portrait"><img src="avatars/idle.webp" alt=""></div>
+  <div class="profile-portrait"><img id="portraitImage" src="avatars/idle.webp" alt=""><video id="portraitVideo" muted autoplay loop playsinline hidden></video></div>
   <div class="field"><label for="buddyName">Your name</label><input id="buddyName" maxlength="80" placeholder="Enter your name"></div>
   <div class="profile-actions">
     <button id="toggleVisibility" type="button" class="button secondary"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg><span id="visibilityLabel">Hide on desktop</span></button>
-    <button id="guideTop" type="button" class="button secondary"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-4 3 3 3-4 5 5"/></svg>Customize images</button>
+    <button id="guideTop" type="button" class="button secondary"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-4 3 3 3-4 5 5"/></svg>Change character image</button>
   </div>
   <div class="profile-options">
     <label class="toggle-row">Sound effects<input id="sound" class="switch" type="checkbox"></label>
@@ -36,14 +36,15 @@
 </section>
 <section class="preview-card" aria-label="Character preview">
   <div class="card-topline">
-    <h2>Preview</h2><span id="previewMood">Idle</span>
+    <h2>Character image</h2><span id="previewMood">Idle</span>
 
   </div>
   <div id="stage" class="stage">
 
+    <video id="videoPreview" hidden muted loop autoplay playsinline></video>
     <img id="originalPreview" src="avatars/idle.webp" alt="Original character in its idle animation">
   </div>
-  <div class="mood-controls" role="group" aria-label="Preview an original character animation">
+  <div class="mood-controls" role="group" aria-label="Choose when the character uses this picture">
     <button type="button" data-mood="idle" aria-pressed="true"><span class="mood-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#i-face"/></svg></span>Idle</button>
     <button type="button" data-mood="walk" aria-pressed="false"><span class="mood-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="14" cy="5" r="2"/><path d="m4 13 5-2 3-2 3 4 4 1m-7-5-2 7-4 4m4-4 4 1 2 4"/></svg></span>Walk</button>
     <button type="button" data-mood="happy" aria-pressed="false"><span class="mood-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M12 7a5 5 0 0 0 5 5 5 5 0 0 0-5 5 5 5 0 0 0-5-5 5 5 0 0 0 5-5z"/></svg></span>Happy</button>
@@ -51,13 +52,20 @@
     <button type="button" data-mood="ask" aria-pressed="false"><span class="mood-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 8a3 3 0 1 1 4 3c-1 .5-1 1-1 2m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg></span>Ask</button>
     <button type="button" data-mood="held" aria-pressed="false"><span class="mood-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#i-upload"/></svg></span>Held</button>
   </div>
+  <div class="picture-edit">
+    <p id="imageContext" lang="ta"></p>
+    <button id="choosePicture" type="button" class="button primary">Choose picture or video</button>
+    <button id="restorePicture" type="button" class="button secondary" hidden>Restore original</button>
+    <input id="pictureFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime" hidden>
+    <p id="pictureStatus" role="status" aria-live="polite"></p>
+  </div>
 </section>
 <section class="customize-card"><div class="card-title"><h2>Companion settings</h2></div><div class="settings-grid"><div class="setting-tile"><div class="label-row"><label for="size">Size</label><output id="sizeOutput" for="size">220 px</output></div><input id="size" type="range" min="100" max="360" value="220"></div>
 <div class="setting-tile"><div class="label-row"><label for="speed">Speed</label><output id="speedOutput" for="speed">1×</output></div><input id="speed" type="range" min="0.2" max="3" step="0.1" value="1"></div>
 <div class="setting-tile accent-tile"><label for="accent">Bubble accent</label><div class="swatches"><button data-color="#2563eb" class="swatch blue" aria-label="Blue accent"></button><button data-color="#8b5cf6" class="swatch violet" aria-label="Violet accent"></button><button data-color="#14b8a6" class="swatch mint" aria-label="Mint accent"></button><button data-color="#f59e0b" class="swatch amber" aria-label="Amber accent"></button><input id="accent" type="color" value="#2563eb" aria-label="Custom accent color"></div></div>
 <label class="setting-tile roam-tile"><span>Wander on desktop</span><input id="roam" type="checkbox" class="switch" checked></label></div>
-<button id="applyCharacter" class="button primary wide">Apply to desktop <svg><use href="#i-arrow"/></svg></button><p class="save-hint" id="saveHint"></p></section></div>
-<details class="advanced-card"><summary>Fine-tune your companion <span>Bubble style & behaviour</span></summary><div class="form-grid"><label>Speech bubble <select id="bubbleStyle"><option value="float">Floating</option><option value="comic">Comic</option><option value="card">Dark card</option></select></label><label class="toggle-row">Celebration laps<input id="lap" class="switch" type="checkbox"></label><label class="toggle-row">Come closer for reminders<input id="come" class="switch" type="checkbox"></label></div><button id="legacyAppearance" class="button secondary">Custom mood images & messages ↗</button><p class="muted">Use the desktop editor to replace individual mood images or videos and edit reminder messages.</p></details>
+<button id="applyCharacter" class="button primary wide">Save size and settings <svg><use href="#i-arrow"/></svg></button><p class="save-hint" id="saveHint"></p></section></div>
+<details class="advanced-card"><summary>Fine-tune your companion <span>Bubble style & behaviour</span></summary><div class="form-grid"><label>Speech bubble <select id="bubbleStyle"><option value="float">Floating</option><option value="comic">Comic</option><option value="card">Dark card</option></select></label><label class="toggle-row">Celebration laps<input id="lap" class="switch" type="checkbox"></label><label class="toggle-row">Come closer for reminders<input id="come" class="switch" type="checkbox"></label></div><button id="legacyAppearance" class="button secondary">Advanced desktop editor ↗</button><p class="muted">Use the desktop editor to replace individual mood images or videos and edit reminder messages.</p></details>
 </section>
 <section id="remindersPage" class="page-panel" hidden><div class="section-card"><div class="card-title"><h2>Reminder schedule</h2></div><div class="reminder-grid"><label>Water reminder · minutes<input id="interval" type="number" min="1" max="240"></label><label>Daily water goal · glasses<input id="goal" type="number" min="1" max="30"></label><label>Quiet hours start · hour<input id="qs" type="number" min="0" max="23"></label><label>Quiet hours end · hour<input id="qe" type="number" min="0" max="23"></label><label class="toggle-row">Eye breaks<input id="eyesOn" class="switch" type="checkbox"></label><label>Eye break interval · minutes<input id="eyesMin" type="number" min="1" max="240"></label><label class="toggle-row">Stretch reminders<input id="stretchOn" class="switch" type="checkbox"></label><label>Stretch interval · minutes<input id="stretchMin" type="number" min="1" max="240"></label><label class="toggle-row">Posture reminders<input id="postureOn" class="switch" type="checkbox"></label><label>Posture interval · minutes<input id="postureMin" type="number" min="1" max="240"></label><label class="toggle-row">Custom reminder<input id="customOn" class="switch" type="checkbox"></label><label>Custom interval · minutes<input id="customMin" type="number" min="1" max="1440"></label></div><label>Your custom reminder<input id="customText" maxlength="500" placeholder="A little reminder for yourself"></label><div class="form-grid"><label>Snooze · minutes<input id="snooze" type="number" min="1" max="120"></label><label class="toggle-row">Desktop notifications<input id="notify" class="switch" type="checkbox"></label></div><button id="saveReminders" class="button primary">Save reminders</button></div></section>
 <section id="connectionsPage" class="page-panel" hidden><div class="connections-grid"><div class="section-card"><div class="connection-icon">G</div><h2>Google account</h2><p>Sign in to read your mail and upcoming events. You review each email before sending.</p><span id="googleStatus" class="soft-badge">Guest</span><button id="connectGoogle" class="button primary">Sign in with Google</button><button id="disconnectGoogle" class="button text" hidden>Disconnect</button><label class="toggle-row"><span>Mail & calendar notifications<small>Checks while Toggle is running.</small></span><input id="googleNotifications" class="switch" type="checkbox"></label></div><div class="section-card"><div class="connection-icon sunny">☀</div><h2>Weather alerts</h2><p>Choose a city and temperature threshold.</p><label>City<div class="input-action"><input id="weatherCity" placeholder="Chennai"><button id="searchCity" class="button secondary">Find</button></div></label><label>Location<select id="weatherPlace"><option value="">Choose a city</option></select></label><label>Alert above · °C<input id="heatThreshold" type="number" min="20" max="50" value="32"></label><label class="toggle-row">Heat alerts<input id="weatherAlerts" class="switch" type="checkbox"></label><p class="muted">Weather by Open-Meteo. Your selected city and coordinates are sent to the service.</p></div></div><button id="saveConnections" class="button primary">Save connections</button><div class="paused-card"><span>Ⅱ</span><div><strong>Local AI is on hold</strong><p>No model installation needed. Customize, connect Google and use the tools below without Ollama.</p></div></div></section>
@@ -78,11 +86,11 @@
     <h2>Customize character images</h2>
     <button id="closeGuide" class="icon-button" aria-label="Close character guide">×</button>
   </div>
-  <ol class="guide-steps">
-    <li>Open the desktop character editor below.</li>
-    <li>Choose a mood slot, such as Idle or Walk, and select an image or video. Transparent images blend into the desktop.</li>
-    <li>Repeat for other moods. Remove an upload from its slot to restore the built-in animation.</li>
+  <ol class="guide-steps" lang="ta">
+    <li>சாதாரணமாக desktop-ல் தெரியும் படத்தை மாற்ற <strong>Idle</strong> தேர்வு செய்யுங்கள். நடக்கும்போது தெரியும் படத்துக்கு <strong>Walk</strong> தேர்வு செய்யுங்கள்.</li>
+    <li><strong>Choose picture or video</strong> அழுத்தி ஒரு ஃபைலைத் தேர்வு செய்யுங்கள். அந்த நிலையில் பயன்படுத்தும் படம் உடனே மாறும்.</li>
+    <li>பழைய கேரக்டரைத் திரும்பப் பெற அதே நிலையில் <strong>Restore original</strong> அழுத்துங்கள்.</li>
   </ol>
-  <button id="openCharacterEditor" class="button primary">Open character editor</button>
+  <button id="openCharacterEditor" class="button primary">Choose a character image</button>
 </dialog>
 </body></html>

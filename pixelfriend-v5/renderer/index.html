@@ -246,6 +246,7 @@ body.web #webbar{display:flex}
 </div>
 <input type="file" id="file" accept="image/png,image/gif,image/webp,image/jpeg,video/mp4,video/webm,video/quicktime" hidden>
 
+<script src="character-images.js"></script>
 <script>
 (() => {
 const isApp = !!window.pf;
@@ -284,12 +285,9 @@ const MOODS = [['idle','Normal'],['walk','Nadakkum'],['ask','Kekkum podhu'],['ha
 const FALLBACK = { walk: 'idle', run: 'walk', ask: 'idle', happy: 'idle', sleep: 'idle', held: 'happy', stretch: 'happy', giggle: 'happy', dizzy: 'idle' };
 const IMG = {};
 const BUNDLED = ['idle','walk','ask','happy','sleep','held']; // default avatar clips shipped in renderer/avatars/
-const db = new Promise((res, rej) => { const r = indexedDB.open('pixelfriend', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-const tx = (mode, fn) => db.then(d => new Promise((res, rej) => { const t = d.transaction('img', mode); const q = fn(t.objectStore('img')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
-const putImg = (k, b) => tx('readwrite', s => s.put(b, k));
-const delImg = k => tx('readwrite', s => s.delete(k));
-const getImg = k => tx('readonly', s => s.get(k));
+const getImg = window.characterImages.read;
+const putImg = window.characterImages.save;
+const delImg = key => putImg(key, null);
 async function loadImgs() {
   for (const [k] of MOODS) { const b = await getImg(k).catch(() => null);
     if (IMG[k] && !IMG[k].bundled) URL.revokeObjectURL(IMG[k].url); IMG[k] = b ? { url: URL.createObjectURL(b), video: /^video/.test(b.type) } : (BUNDLED.includes(k) ? { url: `avatars/${k}.webp`, video: false, bundled: true } : null); }
@@ -771,6 +769,15 @@ window.toggleDesktop = {
   updateSettings: config => { Object.assign(S, config); save(); applyLook(); return JSON.parse(JSON.stringify(S)); }
 };
 /* ======================= start ======================= */
+window.characterImages.onChange(async key => {
+  if (!BUNDLED.includes(key)) return;
+  const blob = await getImg(key);
+  if (IMG[key] && !IMG[key].bundled) URL.revokeObjectURL(IMG[key].url);
+  IMG[key] = blob ? { url: URL.createObjectURL(blob), video: blob.type.startsWith('video/') }
+    : { url: 'avatars/' + key + '.webp', video: false, bundled: true };
+  setMood(mood);
+  if ($('settings').classList.contains('show')) renderSlots();
+});
 loadImgs().catch(() => {}).then(() => {
   applyLook(); face(1); A.x = clampX(innerWidth - 220);
   setMood(quiet() ? 'sleep' : 'idle');

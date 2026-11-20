@@ -34,19 +34,21 @@ function openAgent() {
   agentWindow.loadFile(path.join(__dirname, 'renderer', 'agent.html'));
   agentWindow.on('closed', () => { agentWindow = null; });
 }
-const { readDesktopClient } = require('./studio/google-client');
+const { publisherRegistration } = require('./studio/google-client');
+const releaseRegistration = require('./package.json').googleDesktop;
 let signIn;
 async function connectGoogle() {
   if (signIn) throw new Error('Google sign-in is already open in your browser.');
   if (!agentService.encryptedAvailable()) throw new Error('Unlock your system keychain to sign in.');
   signIn = new AbortController();
   try {
-    const file = app.isPackaged ? path.join(process.resourcesPath, 'google-client.json')
-      : process.env.TOGGLE_GOOGLE_CLIENT_FILE || path.join(__dirname, '.local', 'google-client.json');
-    let client;
-    try { client = await readDesktopClient(file); }
-    catch { throw new Error('Google sign-in is unavailable in this build. You can continue as guest.'); }
-    await agentService.google.connect(client.client_id, client.client_secret, signIn.signal);
+    let client = releaseRegistration;
+    if (!client && !app.isPackaged) {
+      try { client = publisherRegistration(process.env); }
+      catch { throw new Error('Use the Toggle release to sign in with Google, or continue as guest in this development copy.'); }
+    }
+    if (!client) throw new Error('This copy is missing its app registration. Install a complete Toggle release.');
+    await agentService.google.connect(client.clientId, client.clientSecret, signIn.signal);
     return agentService.state();
   } finally { signIn = null; }
 }
